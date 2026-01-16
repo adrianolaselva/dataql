@@ -1,7 +1,7 @@
 package main
 
 import (
-	"adrianolaselva.github.io/csvql/cmd"
+	"github.com/adrianolaselva/dataql/cmd"
 	"fmt"
 	"os"
 )

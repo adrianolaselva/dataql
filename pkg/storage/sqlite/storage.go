@@ -1,7 +1,7 @@
 package sqlite
 
 import (
-	"adrianolaselva.github.io/csvql/pkg/storage"
+	"github.com/adrianolaselva/dataql/pkg/storage"
 	"database/sql"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
@@ -38,13 +38,15 @@ func NewSqLiteStorage(datasource string) (storage.Storage, error) {
 func (s *sqLiteStorage) BuildStructure(tableName string, columns []string) error {
 	var tableAttrsRaw strings.Builder
 
+	// Create quoted column names for SQL but don't modify the original slice
+	quotedColumns := make([]string, len(columns))
 	for i, v := range columns {
-		columns[i] = fmt.Sprintf("`%v`", v)
+		quotedColumns[i] = fmt.Sprintf("`%v`", v)
 	}
 
-	for i, v := range columns {
+	for i, v := range quotedColumns {
 		tableAttrsRaw.WriteString(fmt.Sprintf("\n\t%s text", v))
-		if len(columns)-1 > i {
+		if len(quotedColumns)-1 > i {
 			tableAttrsRaw.WriteString(",")
 		}
 	}
@@ -58,7 +60,7 @@ func (s *sqLiteStorage) BuildStructure(tableName string, columns []string) error
 		return fmt.Errorf("failed to create tables schemas structure: %w", err)
 	}
 
-	columnsRaw := fmt.Sprintf("[%v]", strings.Join(columns, ","))
+	columnsRaw := fmt.Sprintf("[%v]", strings.Join(quotedColumns, ","))
 	if _, err := s.db.Exec(sqlInsertDefaultTableTemplate, []any{tableName, columnsRaw, len(columns)}...); err != nil {
 		return fmt.Errorf("failed to execute insert: %w", err)
 	}
@@ -68,7 +70,12 @@ func (s *sqLiteStorage) BuildStructure(tableName string, columns []string) error
 
 // InsertRow build insert create statement
 func (s *sqLiteStorage) InsertRow(tableName string, columns []string, values []any) error {
-	columnsRaw := strings.Join(columns, ", ")
+	// Quote column names for SQL
+	quotedColumns := make([]string, len(columns))
+	for i, col := range columns {
+		quotedColumns[i] = fmt.Sprintf("`%s`", col)
+	}
+	columnsRaw := strings.Join(quotedColumns, ", ")
 	paramsRaw := strings.Repeat("?, ", len(columns))
 	query := fmt.Sprintf(sqlInsertTemplate, tableName, columnsRaw, paramsRaw[:len(paramsRaw)-2])
 

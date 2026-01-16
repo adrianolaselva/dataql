@@ -1,15 +1,15 @@
 package cmd
 
 import (
-	"adrianolaselva.github.io/csvql/cmd/csvqlctl"
+	"github.com/adrianolaselva/dataql/cmd/dataqlctl"
 	"fmt"
 	"github.com/spf13/cobra"
 	"syscall"
 )
 
 const (
-	commandBase = "csvql"
-	bannerPrint = `csvql cli tools`
+	commandBase = "dataql"
+	bannerPrint = `DataQL - Query and transform data across multiple formats`
 )
 
 type CliBase interface {
@@ -42,12 +42,12 @@ func New() CliBase {
 }
 
 func (c *cliBase) Execute() error {
-	csvQlCtl, err := csvqlctl.New().Command()
+	dataQlCtl, err := dataqlctl.New().Command()
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
 
-	c.rootCmd.AddCommand(csvQlCtl)
+	c.rootCmd.AddCommand(dataQlCtl)
 
 	if err := c.rootCmd.Execute(); err != nil {
 		return fmt.Errorf("failed to execute command %w", err)

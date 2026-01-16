@@ -1,144 +1,263 @@
-# CSVQL 
+# DataQL
 
-<a href="https://github.com/adrianolaselva/csvql"><img align="right" src="./docs/img/logo.png" alt="csvql" title="csvql" width="160px"/></a>
+[![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](https://go.dev)
+[![Build](https://github.com/adrianolaselva/dataql/actions/workflows/build.yml/badge.svg)](https://github.com/adrianolaselva/dataql/actions/workflows/build.yml)
+[![Tests](https://github.com/adrianolaselva/dataql/actions/workflows/test.yml/badge.svg)](https://github.com/adrianolaselva/dataql/actions/workflows/test.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/adrianolaselva/dataql)](https://goreportcard.com/report/github.com/adrianolaselva/dataql)
+[![GoDoc](https://godoc.org/github.com/adrianolaselva/dataql?status.svg)](https://pkg.go.dev/github.com/adrianolaselva/dataql)
+![GitHub issues](https://img.shields.io/github/issues/adrianolaselva/dataql)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+> A powerful CLI tool for querying and transforming data across multiple formats
 
-![github actions](https://github.com/adrianolaselva/csvql/actions/workflows/build.yml/badge.svg)
-[![Build Status](https://scrutinizer-ci.com/g/adrianolaselva/csvql/badges/build.png?b=main)](https://scrutinizer-ci.com/g/adrianolaselva/csvql/build-status/main)
-[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/adrianolaselva/csvql/badges/quality-score.png?b=main)](https://scrutinizer-ci.com/g/adrianolaselva/csvql/?branch=main)
-[![Code Coverage](https://scrutinizer-ci.com/g/adrianolaselva/csvql/badges/coverage.png?b=main)](https://scrutinizer-ci.com/g/adrianolaselva/csvql/?branch=main)
-[![GoDoc](https://godoc.org/github.com/adrianolaselva/csvql?status.svg)](https://pkg.go.dev/github.com/adrianolaselva/csvql)
-![GitHub issues](https://img.shields.io/github/issues/adrianolaselva/csvql)
-![license](http://img.shields.io/badge/license-Apache%20v2-blue.svg)
-
-CLI tool developed in GO to facilitate the handling of CSV files, making it possible to import large files locally
-and manipulate them through sqlite-based SQL statements.
-
-This tool's main objective is to provide a way to manipulate large csv files locally, facilitating analyzes that 
-require the use of tools such as excel.
+DataQL is a CLI tool developed in Go that allows you to query and manipulate data files using SQL statements.
+It loads data into an SQLite database (in-memory or file-based) enabling powerful SQL operations on your data.
 
 ## Features
 
 **Current:**
 
-- Import `.csv` file for manipulation.
-- Using sqlite-based SQL statements.
-- Export `queryes` in `.csv` e `.jsonl`.
+- **Multi-format support**: CSV, JSON, JSONL/NDJSON with auto-detection
+- Execute SQL queries using SQLite syntax
+- Export results to `.csv` or `.jsonl` formats
+- Interactive REPL mode with command history
+- Progress bar for large file operations
+- Parallel file processing for multiple inputs
+- Automatic flattening of nested JSON objects
 
-**future features:**
+**Roadmap:**
 
-- Export `queryes` in `.json` or `sqlite3`.
+- Additional formats: XML, Parquet, Excel
+- Database connectors: PostgreSQL, MySQL, MongoDB
+- Cloud storage: S3, GCS, Azure Blob
+- HTTP/HTTPS URLs as data sources
+- REPL with autocomplete and syntax highlighting
+- Interactive datasource configuration
 
 ## Installation
 
-Run the command below to download and install the latest version of the tool.
+### From Source
 
-```sh
-curl -s "https://raw.githubusercontent.com/adrianolaselva/csvql/main/bin/install" | bash
+```bash
+# Clone the repository
+git clone https://github.com/adrianolaselva/dataql.git
+cd dataql
+
+# Build
+go build -o dataql ./cmd/main.go
+
+# Install (optional)
+go install ./cmd/main.go
 ```
-> Install tool from the `latest` version.
 
-**Note: To install from a specific version, just pass the release number in the url**
+### From Script
 
-```sh
-curl -s "https://raw.githubusercontent.com/adrianolaselva/csvql/v1.0.0/bin/install" | bash
+```bash
+curl -s "https://raw.githubusercontent.com/adrianolaselva/dataql/main/bin/install" | bash
 ```
-> Install tool from the `v1.0.0` version.
 
-**Note: Soon you can also choose to download the binary install and use it**
+> Install the latest version of the tool.
 
-## Uninstallation
+To install a specific version:
 
-Run the command below to download and uninstall.
-
-```sh
-curl -s "https://raw.githubusercontent.com/adrianolaselva/csvql/main/bin/install" | bash
+```bash
+curl -s "https://raw.githubusercontent.com/adrianolaselva/dataql/v1.0.0/bin/install" | bash
 ```
-> Uninstall tool.
 
 ## Usage
 
-Once installed, just run the command below passing a CSV file as a parameter through the `-f` flag and the delimiter 
-used through the `-d` flag.
+### Basic Usage
 
-```sh
-csvql run -f test.csv -d ";"
+Load a data file and start interactive mode (format is auto-detected):
+
+```bash
+# CSV file
+dataql run -f data.csv -d ","
+
+# JSON file (array or single object)
+dataql run -f data.json
+
+# JSONL/NDJSON file (one JSON per line)
+dataql run -f data.jsonl
 ```
-> Example initializing a file named `test.csv` using `;` as delimiter.
 
-**Example using iterative mode:**
+### Supported Input Formats
 
-Below is an example of how the tool works, importing a csv file delimited by the character `;`.
+| Format | Extensions | Description |
+|--------|------------|-------------|
+| CSV | `.csv` | Comma-separated values with configurable delimiter |
+| JSON | `.json` | JSON arrays or single objects |
+| JSONL | `.jsonl`, `.ndjson` | Newline-delimited JSON (streaming) |
 
-```shell
-csvql> select origin_id, description, metric_value, metric_date from rows limit 10;
-origin_id    description                    metric_value   metric_date  
-1007549851   Amazon Sales Revenue           0,35           01/02/2023   
-1007549852   Bahia Sales Revenue            0,21           01/02/2023   
-1007683973   Ceará Sales Revenue            0,65           01/02/2023   
-1007710146   Espírito Santo Sales Revenue   0,58           01/02/2023   
-1007772105   Goiás Sales Revenue            0,06           01/02/2023   
-1007778716   Maranhão Sales Revenue         0,65           01/02/2023   
-1007780734   Mato Grosso Sales Revenue      0,23           01/02/2023   
-1007789224   São Paulo Sales Revenue        0,48           01/02/2023   
-1007975972   Tocantins Sales Revenue        3,01           01/02/2023   
-1008060883   Rio de Janeiro Sales Revenue   0,39           01/02/2023
+### Command Line Options
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--file` | `-f` | Input file(s) (CSV, JSON, JSONL) | Required |
+| `--delimiter` | `-d` | CSV delimiter (only for CSV files) | `,` |
+| `--query` | `-q` | SQL query to execute | - |
+| `--export` | `-e` | Export path | - |
+| `--type` | `-t` | Export format (`csv`, `jsonl`) | - |
+| `--storage` | `-s` | SQLite file path (for persistence) | In-memory |
+| `--lines` | `-l` | Limit number of lines/records to read | All |
+| `--collection` | `-c` | Custom table name | Filename |
+
+### Examples
+
+**Interactive Mode:**
+
+```bash
+dataql run -f sales.csv -d ";"
 ```
-> Example of SQL execution after loading `.csv` file.
 
-**Example just running query:**
-
-Below is an example of how the tool works, importing a csv file delimited by the `;` character and passing the query as a parameter.
-
-```sh
-csvql run -f test.csv -d ";" \ 
-  -q "select origin_id, description, metric_value, metric_date from rows limit 10;"
 ```
-> Example initializing a file named `test.csv` using `;` as delimiter and passing query to execution.
-
-```shell
-[1/1] loading data... 100% [====================================================] (1.6 kB/s) 
-origin_id    description                    metric_value   metric_date  
-1007549851   Amazon Sales Revenue           0,35           01/02/2023   
-1007549852   Bahia Sales Revenue            0,21           01/02/2023   
-1007683973   Ceará Sales Revenue            0,65           01/02/2023   
-1007710146   Espírito Santo Sales Revenue   0,58           01/02/2023   
-1007772105   Goiás Sales Revenue            0,06           01/02/2023   
-1007778716   Maranhão Sales Revenue         0,65           01/02/2023   
-1007780734   Mato Grosso Sales Revenue      0,23           01/02/2023   
-1007789224   São Paulo Sales Revenue        0,48           01/02/2023   
-1007975972   Tocantins Sales Revenue        3,01           01/02/2023   
-1008060883   Rio de Janeiro Sales Revenue   0,39           01/02/2023
+dataql> SELECT product, SUM(amount) as total FROM sales GROUP BY product ORDER BY total DESC LIMIT 10;
+product      total
+Widget Pro   125430.50
+Gadget Plus   98210.00
+...
 ```
-> Example of SQL execution after loading the `.csv` file and executing the query passed by parameter.
 
-**Example: Import, run query and export result inline**
+**Execute Query and Display Results:**
 
-```shell
-wget https://www.stats.govt.nz/assets/Uploads/Annual-enterprise-survey/Annual-enterprise-survey-2021-financial-year-provisional/Download-data/annual-enterprise-survey-2021-financial-year-provisional-csv.csv
+```bash
+dataql run -f data.csv -d "," -q "SELECT * FROM data WHERE amount > 100 LIMIT 10"
 ```
-> Download example csv file
 
-```shell
-./csvql run -f ./annual-enterprise-survey-2021-financial-year-provisional-csv.csv \
-  -d "," \
-  -q "select Year year, Industry_aggregation_NZSIOC industry_aggs, Industry_code_NZSIOC industry_code, Variable_code code, Variable_category category, Variable_name name, Units unit, Value amount from rows;" \
-  -e result.jsonl -t jsonl
+**Export to JSONL:**
+
+```bash
+dataql run -f input.csv -d "," \
+  -q "SELECT id, name, value FROM input WHERE status = 'active'" \
+  -e output.jsonl -t jsonl
 ```
-> Load, run and export data in jsonl
 
-```shell
-./csvql run -f ./annual-enterprise-survey-2021-financial-year-provisional-csv.csv \
-  -d "," \
-  -q "select Year year, Industry_aggregation_NZSIOC industry_aggs, Industry_code_NZSIOC industry_code, Variable_code code, Variable_category category, Variable_name name, Units unit, Value amount from rows limit 20;" \
-  -e result.csv -t csv
+**Export to CSV:**
+
+```bash
+dataql run -f input.csv -d "," \
+  -q "SELECT * FROM input" \
+  -e output.csv -t csv
 ```
-> Load, run and export data in csv
 
-## References
+**Multiple Input Files:**
 
-- [sqlite database](https://www.tutorialspoint.com/sqlite/index.htm)
+```bash
+dataql run -f file1.csv -f file2.csv -d "," \
+  -q "SELECT a.*, b.extra FROM file1 a JOIN file2 b ON a.id = b.id"
+```
+
+**Query JSON Files:**
+
+```bash
+# JSON array
+dataql run -f users.json -q "SELECT name, email FROM users WHERE status = 'active'"
+
+# JSON with nested objects (automatically flattened)
+# {"user": {"name": "John", "address": {"city": "NYC"}}}
+# becomes columns: user_name, user_address_city
+dataql run -f data.json -q "SELECT user_name, user_address_city FROM data"
+```
+
+**Query JSONL/NDJSON Files:**
+
+```bash
+# JSONL is ideal for large datasets (streaming, low memory)
+dataql run -f logs.jsonl -q "SELECT level, message, timestamp FROM logs WHERE level = 'ERROR'"
+
+# Works with .ndjson extension too
+dataql run -f events.ndjson -q "SELECT COUNT(*) as total FROM events"
+```
+
+**Custom Table Name:**
+
+```bash
+# Use --collection to specify a custom table name
+dataql run -f data.json -c my_table -q "SELECT * FROM my_table"
+```
+
+**Persist to SQLite File:**
+
+```bash
+dataql run -f data.csv -d "," -s ./database.db
+```
+
+### Real-World Example
+
+```bash
+# Download sample data
+wget https://www.stats.govt.nz/assets/Uploads/Annual-enterprise-survey/Annual-enterprise-survey-2021-financial-year-provisional/Download-data/annual-enterprise-survey-2021-financial-year-provisional-csv.csv -O survey.csv
+
+# Query and export
+dataql run -f survey.csv -d "," \
+  -q "SELECT Year, Industry_aggregation_NZSIOC as industry, Variable_name as metric, Value as amount FROM survey WHERE Value > 1000" \
+  -e analysis.jsonl -t jsonl
+```
+
+## SQL Reference
+
+DataQL uses SQLite under the hood, supporting standard SQL syntax:
+
+```sql
+-- Basic SELECT
+SELECT column1, column2 FROM tablename;
+
+-- Filtering
+SELECT * FROM data WHERE amount > 100 AND status = 'active';
+
+-- Aggregation
+SELECT category, COUNT(*), SUM(value) FROM data GROUP BY category;
+
+-- Joins (multiple files)
+SELECT a.*, b.extra FROM file1 a JOIN file2 b ON a.id = b.id;
+
+-- Ordering and Limiting
+SELECT * FROM data ORDER BY created_at DESC LIMIT 100;
+```
+
+> **Note:** Table names are derived from filenames (without extension). For `sales.csv`, `sales.json`, or `sales.jsonl`, use `SELECT * FROM sales`. Use `--collection` flag to specify a custom table name.
+
+## Development
+
+### Prerequisites
+
+- Go 1.22 or higher
+- GCC (for SQLite compilation)
+
+### Building
+
+```bash
+make build
+```
+
+### Testing
+
+```bash
+make test
+```
+
+### Linting
+
+```bash
+make lint
+```
+
+## Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-table is released under the MIT License (Expat). See the [full license](https://github.com/adrianolaselva/table/blob/main/license).
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [SQLite](https://www.sqlite.org/) - Embedded database engine
+- [Cobra](https://github.com/spf13/cobra) - CLI framework
+- [go-sqlite3](https://github.com/mattn/go-sqlite3) - SQLite driver for Go

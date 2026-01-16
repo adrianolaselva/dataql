@@ -1,0 +1,14 @@
+- id: "1"
+  user:
+    name: John
+    email: john@test.com
+  address:
+    city: New York
+    country: USA
+- id: "2"
+  user:
+    name: Jane
+    email: jane@test.com
+  address:
+    city: London
+    country: UK

@@ -1,7 +1,7 @@
 package sqlite_test
 
 import (
-	"adrianolaselva.github.io/csvql/pkg/storage/sqlite"
+	"github.com/adrianolaselva/dataql/pkg/storage/sqlite"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

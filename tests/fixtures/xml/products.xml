@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<products>
+    <product id="101" category="electronics">
+        <name>Laptop</name>
+        <price>999.99</price>
+        <stock>50</stock>
+    </product>
+    <product id="102" category="electronics">
+        <name>Phone</name>
+        <price>599.99</price>
+        <stock>100</stock>
+    </product>
+    <product id="103" category="clothing">
+        <name>T-Shirt</name>
+        <price>29.99</price>
+        <stock>200</stock>
+    </product>
+</products>

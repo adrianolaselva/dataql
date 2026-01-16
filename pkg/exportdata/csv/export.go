@@ -1,7 +1,7 @@
 package csv
 
 import (
-	"adrianolaselva.github.io/csvql/pkg/exportdata"
+	"github.com/adrianolaselva/dataql/pkg/exportdata"
 	"database/sql"
 	"encoding/csv"
 	"fmt"

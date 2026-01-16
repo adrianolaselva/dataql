@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<records>
+    <record>
+        <id>1</id>
+        <person>
+            <name>John</name>
+            <contact>
+                <email>john@test.com</email>
+                <phone>123-456</phone>
+            </contact>
+        </person>
+    </record>
+    <record>
+        <id>2</id>
+        <person>
+            <name>Jane</name>
+            <contact>
+                <email>jane@test.com</email>
+                <phone>789-012</phone>
+            </contact>
+        </person>
+    </record>
+</records>

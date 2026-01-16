@@ -1,0 +1,777 @@
+package dataql
+
+import (
+	"bufio"
+	"database/sql"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/adrianolaselva/dataql/internal/exportdata"
+	"github.com/adrianolaselva/dataql/pkg/filehandler"
+	csvHandler "github.com/adrianolaselva/dataql/pkg/filehandler/csv"
+	databaseHandler "github.com/adrianolaselva/dataql/pkg/filehandler/database"
+	excelHandler "github.com/adrianolaselva/dataql/pkg/filehandler/excel"
+	mongodbHandler "github.com/adrianolaselva/dataql/pkg/filehandler/mongodb"
+	jsonHandler "github.com/adrianolaselva/dataql/pkg/filehandler/json"
+	jsonlHandler "github.com/adrianolaselva/dataql/pkg/filehandler/jsonl"
+	parquetHandler "github.com/adrianolaselva/dataql/pkg/filehandler/parquet"
+	xmlHandler "github.com/adrianolaselva/dataql/pkg/filehandler/xml"
+	yamlHandler "github.com/adrianolaselva/dataql/pkg/filehandler/yaml"
+	avroHandler "github.com/adrianolaselva/dataql/pkg/filehandler/avro"
+	orcHandler "github.com/adrianolaselva/dataql/pkg/filehandler/orc"
+	sqliteHandler "github.com/adrianolaselva/dataql/pkg/filehandler/sqlitedb"
+	"github.com/adrianolaselva/dataql/pkg/azurehandler"
+	"github.com/adrianolaselva/dataql/pkg/gcshandler"
+	"github.com/adrianolaselva/dataql/pkg/repl"
+	"github.com/adrianolaselva/dataql/pkg/s3handler"
+	"github.com/adrianolaselva/dataql/pkg/stdinhandler"
+	"github.com/adrianolaselva/dataql/pkg/storage"
+	"github.com/adrianolaselva/dataql/pkg/storage/sqlite"
+	"github.com/adrianolaselva/dataql/pkg/urlhandler"
+	"github.com/chzyer/readline"
+	"github.com/fatih/color"
+	"github.com/rodaine/table"
+	"github.com/schollz/progressbar/v3"
+)
+
+const (
+	cliInterruptPrompt = "^C"
+	cliEOFPrompt       = "exit"
+	defaultPageSize    = 25
+)
+
+// DataQL is the main interface for the data query engine
+type DataQL interface {
+	Run() error
+	Close() error
+}
+
+type dataQL struct {
+	storage      storage.Storage
+	bar          *progressbar.ProgressBar
+	params       Params
+	fileHandler  filehandler.FileHandler
+	urlHandler   *urlhandler.URLHandler
+	s3Handler    *s3handler.S3Handler
+	gcsHandler   *gcshandler.GCSHandler
+	azureHandler *azurehandler.AzureHandler
+	stdinHandler *stdinhandler.StdinHandler
+	pageSize     int
+	paging       bool // Enable paging in REPL mode
+	showTiming   bool // Show query execution time
+}
+
+// verboseLog prints a message if verbose mode is enabled
+func verboseLog(verbose bool, format string, args ...interface{}) {
+	if verbose {
+		fmt.Printf("[VERBOSE] "+format+"\n", args...)
+	}
+}
+
+// New creates a new DataQL instance
+func New(params Params) (DataQL, error) {
+	verboseLog(params.Verbose, "Starting DataQL initialization...")
+	verboseLog(params.Verbose, "File inputs: %v", params.FileInputs)
+
+	// Create stdin handler to resolve any stdin inputs ("-")
+	stdinH := stdinhandler.NewStdinHandler()
+
+	// Check if any file inputs are stdin ("-") and read them to temp files
+	verboseLog(params.Verbose, "Checking for stdin input...")
+	resolvedFiles, err := stdinH.ResolveFiles(params.FileInputs, params.InputFormat)
+	if err != nil {
+		stdinH.Cleanup()
+		return nil, fmt.Errorf("failed to read stdin: %w", err)
+	}
+	params.FileInputs = resolvedFiles
+
+	// Create URL handler to resolve any HTTP/HTTPS URLs in the file inputs
+	urlH := urlhandler.NewURLHandler()
+
+	// Check if any file inputs are HTTP/HTTPS URLs and download them
+	verboseLog(params.Verbose, "Resolving HTTP/HTTPS URLs...")
+	resolvedFiles, err = urlH.ResolveFiles(params.FileInputs)
+	if err != nil {
+		stdinH.Cleanup()
+		urlH.Cleanup() // Clean up any downloaded files on error
+		return nil, fmt.Errorf("failed to resolve file inputs: %w", err)
+	}
+	params.FileInputs = resolvedFiles
+
+	// Create S3 handler to resolve any S3 URLs
+	s3H := s3handler.NewS3Handler()
+
+	// Check if any file inputs are S3 URLs and download them
+	verboseLog(params.Verbose, "Resolving S3 URLs...")
+	resolvedFiles, err = s3H.ResolveFiles(params.FileInputs)
+	if err != nil {
+		stdinH.Cleanup()
+		urlH.Cleanup()
+		s3H.Cleanup()
+		return nil, fmt.Errorf("failed to resolve S3 inputs: %w", err)
+	}
+	params.FileInputs = resolvedFiles
+
+	// Create GCS handler to resolve any GCS URLs
+	gcsH := gcshandler.NewGCSHandler()
+
+	// Check if any file inputs are GCS URLs and download them
+	verboseLog(params.Verbose, "Resolving GCS URLs...")
+	resolvedFiles, err = gcsH.ResolveFiles(params.FileInputs)
+	if err != nil {
+		stdinH.Cleanup()
+		urlH.Cleanup()
+		s3H.Cleanup()
+		gcsH.Cleanup()
+		return nil, fmt.Errorf("failed to resolve GCS inputs: %w", err)
+	}
+	params.FileInputs = resolvedFiles
+
+	// Create Azure handler to resolve any Azure Blob URLs
+	azureH := azurehandler.NewAzureHandler()
+
+	// Check if any file inputs are Azure URLs and download them
+	verboseLog(params.Verbose, "Resolving Azure Blob URLs...")
+	resolvedFiles, err = azureH.ResolveFiles(params.FileInputs)
+	if err != nil {
+		stdinH.Cleanup()
+		urlH.Cleanup()
+		s3H.Cleanup()
+		gcsH.Cleanup()
+		azureH.Cleanup()
+		return nil, fmt.Errorf("failed to resolve Azure inputs: %w", err)
+	}
+	params.FileInputs = resolvedFiles
+	verboseLog(params.Verbose, "Resolved file inputs: %v", params.FileInputs)
+
+	verboseLog(params.Verbose, "Initializing SQLite storage...")
+	sqLiteStorage, err := sqlite.NewSqLiteStorage(params.DataSourceName)
+	if err != nil {
+		stdinH.Cleanup()
+		urlH.Cleanup()
+		s3H.Cleanup()
+		gcsH.Cleanup()
+		azureH.Cleanup()
+		return nil, fmt.Errorf("failed to initialize storage: %w", err)
+	}
+
+	bar := progressbar.NewOptions(0,
+		progressbar.OptionSetWriter(os.Stdout),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionShowBytes(true),
+		progressbar.OptionFullWidth(),
+		progressbar.OptionSetDescription("[cyan][1/1][reset] loading data..."),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}))
+
+	verboseLog(params.Verbose, "Creating file handler...")
+	handler, err := createFileHandler(params, bar, sqLiteStorage)
+	if err != nil {
+		stdinH.Cleanup()
+		urlH.Cleanup()
+		s3H.Cleanup()
+		gcsH.Cleanup()
+		azureH.Cleanup()
+		return nil, fmt.Errorf("failed to create file handler: %w", err)
+	}
+
+	verboseLog(params.Verbose, "DataQL initialization complete")
+	return &dataQL{params: params, bar: bar, fileHandler: handler, storage: sqLiteStorage, urlHandler: urlH, s3Handler: s3H, gcsHandler: gcsH, azureHandler: azureH, stdinHandler: stdinH, pageSize: defaultPageSize}, nil
+}
+
+// createFileHandler creates the appropriate file handler based on file format
+func createFileHandler(params Params, bar *progressbar.ProgressBar, storage storage.Storage) (filehandler.FileHandler, error) {
+	// Detect format from file extensions
+	format, err := filehandler.DetectFormatFromFiles(params.FileInputs)
+	if err != nil {
+		return nil, err
+	}
+
+	switch format {
+	case filehandler.FormatCSV:
+		delimiter := ','
+		if params.Delimiter != "" {
+			delimiter = rune(params.Delimiter[0])
+		}
+		return csvHandler.NewCsvHandler(params.FileInputs, delimiter, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatJSON:
+		return jsonHandler.NewJsonHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatJSONL:
+		return jsonlHandler.NewJsonlHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatXML:
+		return xmlHandler.NewXmlHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatExcel:
+		return excelHandler.NewExcelHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatParquet:
+		return parquetHandler.NewParquetHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatYAML:
+		return yamlHandler.NewYamlHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatAVRO:
+		return avroHandler.NewAvroHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatORC:
+		return orcHandler.NewOrcHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatPostgres, filehandler.FormatMySQL, filehandler.FormatDuckDB:
+		if len(params.FileInputs) != 1 {
+			return nil, fmt.Errorf("database URL must be a single connection string")
+		}
+		connInfo, err := databaseHandler.ParseDatabaseURL(params.FileInputs[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse database URL: %w", err)
+		}
+		if connInfo.Table == "" {
+			return nil, fmt.Errorf("database URL must include table name: postgres://user:pass@host:port/database/table")
+		}
+		return databaseHandler.NewDBHandler(*connInfo, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatMongoDB:
+		if len(params.FileInputs) != 1 {
+			return nil, fmt.Errorf("MongoDB URL must be a single connection string")
+		}
+		connInfo, err := mongodbHandler.ParseMongoDBURL(params.FileInputs[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse MongoDB URL: %w", err)
+		}
+		return mongodbHandler.NewMongoHandler(*connInfo, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatSQLite:
+		return sqliteHandler.NewSqliteHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+
+	default:
+		return nil, fmt.Errorf("unsupported file format: %s", format)
+	}
+}
+
+// Run imports file content and runs the command
+func (d *dataQL) Run() error {
+	defer func(bar *progressbar.ProgressBar) {
+		_ = bar.Clear()
+	}(d.bar)
+
+	verboseLog(d.params.Verbose, "Starting data import...")
+	if err := d.fileHandler.Import(); err != nil {
+		return fmt.Errorf("failed to import data %w", err)
+	}
+	verboseLog(d.params.Verbose, "Data import complete. Lines imported: %d", d.fileHandler.Lines())
+	defer func(fileHandler filehandler.FileHandler) {
+		_ = fileHandler.Close()
+	}(d.fileHandler)
+
+	verboseLog(d.params.Verbose, "Listing available tables...")
+	rows, err := d.storage.ShowTables()
+	if err != nil {
+		return fmt.Errorf("failed to list tables: %w", err)
+	}
+
+	if _, err := d.printResult(rows); err != nil {
+		return fmt.Errorf("failed to print tables: %w", err)
+	}
+
+	return d.execute()
+}
+
+// execute runs the execution after data import
+func (d *dataQL) execute() error {
+	switch {
+	case d.params.Query != "" && d.params.Export == "":
+		return d.executeQuery(d.params.Query)
+	case d.params.Query != "" && d.params.Export != "":
+		return d.executeQueryAndExport(d.params.Query)
+	default:
+		if err := d.initializePrompt(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Close cleans up resources
+func (d *dataQL) Close() error {
+	defer func(fileHandler filehandler.FileHandler) {
+		_ = fileHandler.Close()
+	}(d.fileHandler)
+
+	// Clean up any temp files from stdin
+	if d.stdinHandler != nil {
+		_ = d.stdinHandler.Cleanup()
+	}
+
+	// Clean up any downloaded temp files from HTTP/HTTPS URLs
+	if d.urlHandler != nil {
+		_ = d.urlHandler.Cleanup()
+	}
+
+	// Clean up any downloaded temp files from S3
+	if d.s3Handler != nil {
+		_ = d.s3Handler.Cleanup()
+	}
+
+	// Clean up any downloaded temp files from GCS
+	if d.gcsHandler != nil {
+		_ = d.gcsHandler.Cleanup()
+	}
+
+	// Clean up any downloaded temp files from Azure
+	if d.azureHandler != nil {
+		_ = d.azureHandler.Cleanup()
+	}
+
+	return nil
+}
+
+// getHistoryFilePath returns the path to the history file
+func getHistoryFilePath() string {
+	// Try to get user's home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		// Fallback to temp directory if home is not available
+		return filepath.Join(os.TempDir(), ".dataql_history")
+	}
+
+	// Create .dataql directory if it doesn't exist
+	dataqlDir := filepath.Join(homeDir, ".dataql")
+	if err := os.MkdirAll(dataqlDir, 0755); err != nil {
+		// Fallback to home directory directly
+		return filepath.Join(homeDir, ".dataql_history")
+	}
+
+	return filepath.Join(dataqlDir, "history")
+}
+
+func (d *dataQL) initializePrompt() error {
+	// Create SQL completer with autocomplete support
+	completer := repl.NewSQLCompleter(d.storage)
+	if err := completer.RefreshSchema(); err != nil {
+		// Non-fatal: continue without autocomplete if schema refresh fails
+		fmt.Fprintf(os.Stderr, "Warning: autocomplete disabled (%v)\n", err)
+	}
+
+	// Create colored prompt
+	promptColor := color.New(color.FgCyan, color.Bold)
+	cliPrompt := promptColor.Sprint("dataql> ")
+
+	// Get history file path for persistent history
+	historyFile := getHistoryFilePath()
+
+	l, err := readline.NewEx(&readline.Config{
+		Prompt:            cliPrompt,
+		InterruptPrompt:   cliInterruptPrompt,
+		EOFPrompt:         cliEOFPrompt,
+		AutoComplete:      completer,
+		HistoryFile:       historyFile,
+		HistorySearchFold: true,
+		HistoryLimit:      1000,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to initialize cli: %w", err)
+	}
+
+	defer func(l *readline.Instance) {
+		_ = l.Close()
+	}(l)
+
+	l.CaptureExitSignal()
+
+	for {
+		line, err := l.Readline()
+		if errors.Is(err, readline.ErrInterrupt) {
+			if len(line) == 0 {
+				break
+			}
+
+			continue
+		}
+
+		if errors.Is(err, io.EOF) {
+			break
+		}
+
+		line = strings.TrimSpace(line)
+		if err := d.executeQuery(line); err != nil {
+			if errors.Is(err, io.EOF) {
+				break // Exit REPL when \q or .quit is used
+			}
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+		}
+	}
+
+	return nil
+}
+
+// executeQueryAndExport executes query and exports results
+func (d *dataQL) executeQueryAndExport(line string) error {
+	d.bar.Reset()
+	d.bar.ChangeMax(d.fileHandler.Lines())
+	defer func(bar *progressbar.ProgressBar) {
+		_ = bar.Finish()
+	}(d.bar)
+
+	rows, err := d.storage.Query(line)
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %w", err)
+	}
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
+
+	export, err := exportdata.NewExport(d.params.Type, rows, d.params.Export, d.bar)
+	if err != nil {
+		return fmt.Errorf("failed to export: %w", err)
+	}
+
+	if err := export.Export(); err != nil {
+		return fmt.Errorf("failed to export data: %w", err)
+	}
+
+	_ = d.bar.Clear()
+
+	fmt.Printf("[%s] file successfully exported\n", d.params.Export)
+
+	return nil
+}
+
+// handleREPLCommand handles special REPL commands (aliases)
+// Returns true if the line was a REPL command, false if it should be executed as SQL
+func (d *dataQL) handleREPLCommand(line string) (bool, error) {
+	// Normalize command (trim and lowercase for comparison)
+	cmd := strings.ToLower(strings.TrimSpace(line))
+	parts := strings.Fields(cmd)
+	if len(parts) == 0 {
+		return true, nil // Empty line, no action needed
+	}
+
+	switch parts[0] {
+	case "\\q", ".quit", ".exit":
+		return true, io.EOF // Signal to exit REPL
+
+	case "\\h", ".help", "\\?":
+		d.printHelp()
+		return true, nil
+
+	case "\\d", ".tables":
+		rows, err := d.storage.ShowTables()
+		if err != nil {
+			return true, fmt.Errorf("failed to list tables: %w", err)
+		}
+		if _, err := d.printResult(rows); err != nil {
+			return true, err
+		}
+		return true, nil
+
+	case "\\dt", ".schema":
+		if len(parts) < 2 {
+			return true, fmt.Errorf("usage: \\dt <table_name> or .schema <table_name>")
+		}
+		tableName := parts[1]
+		return true, d.describeTable(tableName)
+
+	case ".clear":
+		fmt.Print("\033[H\033[2J")
+		return true, nil
+
+	case ".version":
+		fmt.Println("dataql version 1.0.0")
+		return true, nil
+
+	case ".pagesize":
+		if len(parts) < 2 {
+			fmt.Printf("Current page size: %d\n", d.pageSize)
+			return true, nil
+		}
+		size, err := strconv.Atoi(parts[1])
+		if err != nil || size < 1 {
+			return true, fmt.Errorf("invalid page size: %s (must be a positive integer)", parts[1])
+		}
+		d.pageSize = size
+		fmt.Printf("Page size set to %d\n", size)
+		return true, nil
+
+	case ".paging":
+		if len(parts) < 2 {
+			status := "off"
+			if d.paging {
+				status = "on"
+			}
+			fmt.Printf("Paging is %s (page size: %d)\n", status, d.pageSize)
+			return true, nil
+		}
+		switch strings.ToLower(parts[1]) {
+		case "on", "true", "1":
+			d.paging = true
+			fmt.Println("Paging enabled")
+		case "off", "false", "0":
+			d.paging = false
+			fmt.Println("Paging disabled")
+		default:
+			return true, fmt.Errorf("invalid paging value: %s (use on/off)", parts[1])
+		}
+		return true, nil
+
+	case ".timing":
+		if len(parts) < 2 {
+			status := "off"
+			if d.showTiming {
+				status = "on"
+			}
+			fmt.Printf("Timing is %s\n", status)
+			return true, nil
+		}
+		switch strings.ToLower(parts[1]) {
+		case "on", "true", "1":
+			d.showTiming = true
+			fmt.Println("Timing enabled")
+		case "off", "false", "0":
+			d.showTiming = false
+			fmt.Println("Timing disabled")
+		default:
+			return true, fmt.Errorf("invalid timing value: %s (use on/off)", parts[1])
+		}
+		return true, nil
+
+	case "\\c", ".count":
+		if len(parts) < 2 {
+			return true, fmt.Errorf("usage: \\c <table_name> or .count <table_name>")
+		}
+		tableName := parts[1]
+		return true, d.countTable(tableName)
+	}
+
+	return false, nil // Not a REPL command, should be executed as SQL
+}
+
+// printHelp prints the REPL help message
+func (d *dataQL) printHelp() {
+	helpText := `
+DataQL REPL Commands:
+  \d, .tables          List all tables
+  \dt <table>, .schema <table>  Show table schema
+  \c <table>, .count <table>    Count rows in table
+  \q, .quit, .exit     Exit the REPL
+  \h, .help, \?        Show this help message
+  .clear               Clear the screen
+  .version             Show version
+  .paging [on|off]     Enable/disable result pagination
+  .pagesize [n]        Set/show page size (default: 25)
+  .timing [on|off]     Enable/disable query timing display
+
+SQL Examples:
+  SELECT * FROM <table>
+  SELECT * FROM <table> WHERE <column> = '<value>'
+  SELECT * FROM <table> ORDER BY <column> DESC LIMIT 10
+`
+	fmt.Println(helpText)
+}
+
+// describeTable shows the schema of a table
+func (d *dataQL) describeTable(tableName string) error {
+	query := fmt.Sprintf("PRAGMA table_info(%s)", tableName)
+	rows, err := d.storage.Query(query)
+	if err != nil {
+		return fmt.Errorf("failed to describe table: %w", err)
+	}
+	defer rows.Close()
+
+	_, err = d.printResult(rows)
+	return err
+}
+
+// countTable shows the row count for a table
+func (d *dataQL) countTable(tableName string) error {
+	query := fmt.Sprintf("SELECT COUNT(*) as count FROM %s", tableName)
+	rows, err := d.storage.Query(query)
+	if err != nil {
+		return fmt.Errorf("failed to count table: %w", err)
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		var count int64
+		if err := rows.Scan(&count); err != nil {
+			return fmt.Errorf("failed to read count: %w", err)
+		}
+		fmt.Printf("%s: %d rows\n", tableName, count)
+	}
+	return nil
+}
+
+func (d *dataQL) executeQuery(line string) error {
+	// Check for REPL commands first
+	if handled, err := d.handleREPLCommand(line); handled {
+		return err
+	}
+
+	startTime := time.Now()
+
+	rows, err := d.storage.Query(line)
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %w", err)
+	}
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
+
+	rowCount, err := d.printResult(rows)
+	if err != nil {
+		return err
+	}
+
+	elapsed := time.Since(startTime)
+	if d.showTiming {
+		fmt.Printf("(%d rows in %v)\n", rowCount, elapsed.Round(time.Millisecond))
+	} else {
+		fmt.Printf("(%d rows)\n", rowCount)
+	}
+
+	return nil
+}
+
+func (d *dataQL) printResult(rows *sql.Rows) (int, error) {
+	columns, err := rows.Columns()
+	if err != nil {
+		return 0, fmt.Errorf("failed to load columns: %w", err)
+	}
+
+	cols := make([]interface{}, 0)
+	for _, c := range columns {
+		cols = append(cols, c)
+	}
+
+	_ = d.bar.Clear()
+
+	// If paging is disabled, print all results at once
+	if !d.paging {
+		return d.printAllRows(rows, columns, cols)
+	}
+
+	// Paging enabled: print page by page
+	return d.printPaginatedRows(rows, columns, cols)
+}
+
+// printAllRows prints all rows without pagination
+func (d *dataQL) printAllRows(rows *sql.Rows, columns []string, cols []interface{}) (int, error) {
+	tbl := table.New(cols...).
+		WithHeaderFormatter(color.New(color.FgGreen, color.Underline).SprintfFunc()).
+		WithFirstColumnFormatter(color.New(color.FgYellow).SprintfFunc()).
+		WithWriter(os.Stdout)
+
+	rowCount := 0
+	for rows.Next() {
+		values := make([]interface{}, len(columns))
+		pointers := make([]interface{}, len(columns))
+		for i := range values {
+			pointers[i] = &values[i]
+		}
+
+		if err := rows.Scan(pointers...); err != nil {
+			return rowCount, fmt.Errorf("failed to read row: %w", err)
+		}
+
+		tbl.AddRow(values...)
+		rowCount++
+	}
+
+	tbl.Print()
+	return rowCount, nil
+}
+
+// printPaginatedRows prints rows with pagination
+func (d *dataQL) printPaginatedRows(rows *sql.Rows, columns []string, cols []interface{}) (int, error) {
+	reader := bufio.NewReader(os.Stdin)
+	rowCount := 0
+	pageNum := 1
+
+	// pendingRow holds the next row if we peeked ahead
+	var pendingRow []interface{}
+
+	for {
+		// Create a new table for this page
+		tbl := table.New(cols...).
+			WithHeaderFormatter(color.New(color.FgGreen, color.Underline).SprintfFunc()).
+			WithFirstColumnFormatter(color.New(color.FgYellow).SprintfFunc()).
+			WithWriter(os.Stdout)
+
+		// Collect rows for this page
+		pageRows := 0
+
+		// First, add the pending row if we have one
+		if pendingRow != nil {
+			tbl.AddRow(pendingRow...)
+			rowCount++
+			pageRows++
+			pendingRow = nil
+		}
+
+		// Read more rows for this page
+		for pageRows < d.pageSize && rows.Next() {
+			values := make([]interface{}, len(columns))
+			pointers := make([]interface{}, len(columns))
+			for i := range values {
+				pointers[i] = &values[i]
+			}
+
+			if err := rows.Scan(pointers...); err != nil {
+				return rowCount, fmt.Errorf("failed to read row: %w", err)
+			}
+
+			tbl.AddRow(values...)
+			rowCount++
+			pageRows++
+		}
+
+		// Print this page if we have any rows
+		if pageRows > 0 {
+			tbl.Print()
+		}
+
+		// Check if we've read fewer rows than page size (no more rows)
+		if pageRows < d.pageSize {
+			return rowCount, nil
+		}
+
+		// Peek ahead to see if there are more rows
+		if rows.Next() {
+			// Save this row for the next page
+			values := make([]interface{}, len(columns))
+			pointers := make([]interface{}, len(columns))
+			for i := range values {
+				pointers[i] = &values[i]
+			}
+			if err := rows.Scan(pointers...); err != nil {
+				return rowCount, fmt.Errorf("failed to read row: %w", err)
+			}
+			pendingRow = values
+
+			// Prompt user for next page
+			fmt.Printf("\n-- Page %d (%d rows shown) -- Press Enter for more, q to quit --\n", pageNum, rowCount)
+			input, _ := reader.ReadString('\n')
+			input = strings.TrimSpace(strings.ToLower(input))
+			if input == "q" || input == "quit" {
+				return rowCount, nil
+			}
+			pageNum++
+		} else {
+			// No more rows
+			return rowCount, nil
+		}
+	}
+}

@@ -1,7 +1,7 @@
 package jsonl
 
 import (
-	"adrianolaselva.github.io/csvql/pkg/exportdata"
+	"github.com/adrianolaselva/dataql/pkg/exportdata"
 	"bytes"
 	"database/sql"
 	"encoding/json"
@@ -70,7 +70,7 @@ func (j *jsonlExport) readAndAppendFile() error {
 
 	attr := map[string]interface{}{}
 	for i, c := range j.columns {
-		attr[c] = pointers[i]
+		attr[c] = values[i]
 	}
 
 	payload, err := json.Marshal(attr)

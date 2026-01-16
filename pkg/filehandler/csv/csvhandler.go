@@ -1,27 +1,28 @@
 package csv
 
 import (
-	"adrianolaselva.github.io/csvql/pkg/filehandler"
-	"adrianolaselva.github.io/csvql/pkg/storage"
 	"bytes"
 	"database/sql"
 	"encoding/csv"
 	"errors"
 	"fmt"
-	"github.com/schollz/progressbar/v3"
 	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/adrianolaselva/dataql/pkg/filehandler"
+	"github.com/adrianolaselva/dataql/pkg/storage"
+	"github.com/schollz/progressbar/v3"
 )
 
 const (
 	bufferMaxLength = 32 * 1024
 )
 
-var nonAlphanumericRegex = regexp.MustCompile(`[^a-zA-Z0-9 ]+`)
+var nonAlphanumericRegex = regexp.MustCompile(`[^a-zA-Z0-9_ ]+`)
 
 type csvHandler struct {
 	mx          sync.Mutex
@@ -33,32 +34,22 @@ type csvHandler struct {
 	limitLines  int
 	currentLine int
 	delimiter   rune
+	collection  string
 }
 
-func NewCsvHandler(fileInputs []string, delimiter rune, bar *progressbar.ProgressBar, storage storage.Storage, limitLines int) filehandler.FileHandler {
-	return &csvHandler{fileInputs: fileInputs, delimiter: delimiter, storage: storage, bar: bar, limitLines: limitLines}
+// NewCsvHandler creates a new CSV file handler
+func NewCsvHandler(fileInputs []string, delimiter rune, bar *progressbar.ProgressBar, storage storage.Storage, limitLines int, collection string) filehandler.FileHandler {
+	return &csvHandler{fileInputs: fileInputs, delimiter: delimiter, storage: storage, bar: bar, limitLines: limitLines, collection: collection}
 }
 
-// Import import data
+// Import imports data from CSV files
 func (c *csvHandler) Import() error {
 	if err := c.openFiles(); err != nil {
 		return err
 	}
 
-	wg := new(sync.WaitGroup)
-	wg.Add(len(c.fileInputs))
-	errChannels := make(chan error, len(c.fileInputs))
-
-	for _, file := range c.fileInputs {
-		go func(wg *sync.WaitGroup, file string, errChan chan error) {
-			defer wg.Done()
-			err := c.loadTotalRows(file)
-			errChan <- err
-		}(wg, file, errChannels)
-	}
-
-	wg.Wait()
-	if err := <-errChannels; err != nil {
+	// Load total rows from all files
+	if err := c.countTotalRows(); err != nil {
 		return err
 	}
 
@@ -66,32 +57,122 @@ func (c *csvHandler) Import() error {
 		c.totalLines = c.limitLines
 	}
 
-	wg.Add(len(c.files))
-	errChannels = make(chan error, len(c.files))
-	for _, file := range c.files {
-		tableName := c.formatTableName(file)
-		go func(wg *sync.WaitGroup, file *os.File, tableName string, errChan chan error) {
-			defer wg.Done()
-			errChan <- c.loadDataFromFile(tableName, file)
-		}(wg, file, tableName, errChannels)
-	}
-
-	wg.Wait()
-	if err := <-errChannels; err != nil {
+	// Load data from all files
+	if err := c.loadAllFiles(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// formatTableName format table name by removing invalid characters
+// countTotalRows counts total rows across all files in parallel
+func (c *csvHandler) countTotalRows() error {
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(c.fileInputs))
+	linesChan := make(chan int, len(c.fileInputs))
+
+	for _, file := range c.fileInputs {
+		wg.Add(1)
+		go func(filePath string) {
+			defer wg.Done()
+			lines, err := c.countFileLines(filePath)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			linesChan <- lines
+		}(file)
+	}
+
+	wg.Wait()
+	close(errChan)
+	close(linesChan)
+
+	// Check for errors
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
+	}
+
+	// Sum all lines
+	c.totalLines = 0
+	for lines := range linesChan {
+		c.totalLines += lines
+	}
+
+	return nil
+}
+
+// countFileLines counts the number of lines in a file
+func (c *csvHandler) countFileLines(filePath string) (int, error) {
+	r, err := os.Open(filePath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to open file %s: %w", filePath, err)
+	}
+	defer func(r *os.File) {
+		_ = r.Close()
+	}(r)
+
+	buf := make([]byte, bufferMaxLength)
+	count := 0
+	lineSep := []byte{'\n'}
+
+	for {
+		n, err := r.Read(buf)
+		count += bytes.Count(buf[:n], lineSep)
+
+		switch {
+		case err == io.EOF:
+			return count, nil
+		case err != nil:
+			return 0, fmt.Errorf("failed to count rows: %w", err)
+		}
+	}
+}
+
+// loadAllFiles loads data from all files in parallel
+func (c *csvHandler) loadAllFiles() error {
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(c.files))
+
+	for _, file := range c.files {
+		wg.Add(1)
+		tableName := c.formatTableName(file)
+		go func(f *os.File, tbl string) {
+			defer wg.Done()
+			if err := c.loadDataFromFile(tbl, f); err != nil {
+				errChan <- err
+			}
+		}(file, tableName)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	// Return the first error encountered
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// formatTableName formats table name by removing invalid characters
+// If collection is provided, it will be used as the table name
 func (c *csvHandler) formatTableName(file *os.File) string {
+	if c.collection != "" {
+		tableName := strings.ReplaceAll(strings.ToLower(c.collection), " ", "_")
+		return nonAlphanumericRegex.ReplaceAllString(tableName, "")
+	}
 	tableName := strings.ReplaceAll(strings.ToLower(filepath.Base(file.Name())), filepath.Ext(file.Name()), "")
 	tableName = strings.ReplaceAll(tableName, " ", "_")
 	return nonAlphanumericRegex.ReplaceAllString(tableName, "")
 }
 
-// Query execute statements
+// Query executes SQL statements
 func (c *csvHandler) Query(cmd string) (*sql.Rows, error) {
 	rows, err := c.storage.Query(cmd)
 	if err != nil {
@@ -101,12 +182,12 @@ func (c *csvHandler) Query(cmd string) (*sql.Rows, error) {
 	return rows, nil
 }
 
-// Lines return total lines
+// Lines returns total lines count
 func (c *csvHandler) Lines() int {
 	return c.totalLines
 }
 
-// Close execute in defer
+// Close cleans up resources
 func (c *csvHandler) Close() error {
 	defer func(storage storage.Storage) {
 		_ = storage.Close()
@@ -121,7 +202,7 @@ func (c *csvHandler) Close() error {
 	return nil
 }
 
-// loadDataFromFile load data from file
+// loadDataFromFile loads data from a single file
 func (c *csvHandler) loadDataFromFile(tableName string, file *os.File) error {
 	c.mx.Lock()
 	defer c.mx.Unlock()
@@ -151,7 +232,7 @@ func (c *csvHandler) loadDataFromFile(tableName string, file *os.File) error {
 	return nil
 }
 
-// readHeader read header
+// readHeader reads the header row and creates the table structure
 func (c *csvHandler) readHeader(tableName string, r *csv.Reader) ([]string, error) {
 	columns, err := r.Read()
 	if err != nil {
@@ -165,7 +246,7 @@ func (c *csvHandler) readHeader(tableName string, r *csv.Reader) ([]string, erro
 	return columns, nil
 }
 
-// readline read line
+// readline reads a single line from the CSV file
 func (c *csvHandler) readline(tableName string, columns []string, r *csv.Reader) error {
 	records, err := r.Read()
 	if err != nil {
@@ -186,7 +267,7 @@ func (c *csvHandler) readline(tableName string, columns []string, r *csv.Reader)
 	return nil
 }
 
-// convertToAnyArray convert string array to any array
+// convertToAnyArray converts string array to any array
 func (c *csvHandler) convertToAnyArray(records []string) []any {
 	values := make([]any, 0, len(records))
 	for _, r := range records {
@@ -196,59 +277,52 @@ func (c *csvHandler) convertToAnyArray(records []string) []any {
 	return values
 }
 
-// openFile open file
+// openFiles opens all input files
 func (c *csvHandler) openFiles() error {
-	wg := new(sync.WaitGroup)
-	wg.Add(len(c.fileInputs))
-	errChannels := make(chan error, len(c.fileInputs))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	errChan := make(chan error, len(c.fileInputs))
 
-	for _, file := range c.fileInputs {
-		go func(wg *sync.WaitGroup, file string, errChan chan error) {
+	for _, filePath := range c.fileInputs {
+		wg.Add(1)
+		go func(fp string) {
 			defer wg.Done()
 
-			f, err := os.Open(file)
+			f, err := os.Open(fp)
 			if err != nil {
-				errChan <- fmt.Errorf("failed to open file: %w", err)
+				errChan <- fmt.Errorf("failed to open file %s: %w", fp, err)
 				return
 			}
 
+			mu.Lock()
 			c.files = append(c.files, f)
-			errChan <- nil
-		}(wg, file, errChannels)
+			mu.Unlock()
+		}(filePath)
 	}
 
 	wg.Wait()
-	if err := <-errChannels; err != nil {
-		return fmt.Errorf("failed to open file: %w", err)
+	close(errChan)
+
+	// Return the first error encountered
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-// loadTotalRows load total rows in file
+// loadTotalRows is deprecated, use countTotalRows instead
 func (c *csvHandler) loadTotalRows(file string) error {
-	r, err := os.Open(file)
+	lines, err := c.countFileLines(file)
 	if err != nil {
-		return fmt.Errorf("failed to open file %s: %w", file, err)
+		return err
 	}
-	defer func(r *os.File) {
-		_ = r.Close()
-	}(r)
 
-	buf := make([]byte, bufferMaxLength)
-	c.totalLines = 0
-	lineSep := []byte{'\n'}
+	c.mx.Lock()
+	c.totalLines += lines
+	c.mx.Unlock()
 
-	for {
-		r, err := r.Read(buf)
-		c.totalLines += bytes.Count(buf[:r], lineSep)
-
-		switch {
-		case err == io.EOF:
-			return nil
-
-		case err != nil:
-			return fmt.Errorf("failed to totalize rows: %w", err)
-		}
-	}
+	return nil
 }

@@ -36,6 +36,42 @@ It loads data into an SQLite database (in-memory or file-based) enabling powerfu
 
 ## Installation
 
+### Quick Install (Recommended)
+
+**Linux / macOS:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash
+```
+
+**Windows (PowerShell):**
+
+```powershell
+irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
+```
+
+### Install Options
+
+**Specific version:**
+
+```bash
+# Linux/macOS
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --version v1.0.0
+
+# Windows
+$env:DATAQL_VERSION="v1.0.0"; irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
+```
+
+**User installation (no sudo/admin required):**
+
+```bash
+# Linux/macOS
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --local
+
+# Windows
+$env:DATAQL_USER_INSTALL="true"; irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
+```
+
 ### From Source
 
 ```bash
@@ -43,25 +79,31 @@ It loads data into an SQLite database (in-memory or file-based) enabling powerfu
 git clone https://github.com/adrianolaselva/dataql.git
 cd dataql
 
-# Build
-go build -o dataql ./cmd/main.go
-
-# Install (optional)
-go install ./cmd/main.go
+# Build and install
+make build
+make install       # requires sudo
+# or
+make install-local # installs to ~/.local/bin
 ```
 
-### From Script
+### Verify Installation
 
 ```bash
-curl -s "https://raw.githubusercontent.com/adrianolaselva/dataql/main/bin/install" | bash
+dataql --version
 ```
 
-> Install the latest version of the tool.
+### Uninstall
 
-To install a specific version:
+**Linux / macOS:**
 
 ```bash
-curl -s "https://raw.githubusercontent.com/adrianolaselva/dataql/v1.0.0/bin/install" | bash
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/uninstall.sh | bash
+```
+
+**Windows (PowerShell):**
+
+```powershell
+irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/uninstall.ps1 | iex
 ```
 
 ## Usage

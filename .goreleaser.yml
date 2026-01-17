@@ -1,0 +1,119 @@
+# GoReleaser configuration for DataQL
+# Docs: https://goreleaser.com
+
+version: 2
+
+project_name: dataql
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: dataql
+    main: ./main.go
+    binary: dataql
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X github.com/adrianolaselva/dataql/cmd.Version={{.Version}}
+      - -X github.com/adrianolaselva/dataql/cmd.Commit={{.ShortCommit}}
+      - -X github.com/adrianolaselva/dataql/cmd.Date={{.Date}}
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE*
+      - README*
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: 'New Features'
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 'Bug Fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: 'Performance Improvements'
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: 'Refactoring'
+      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: 'Other Changes'
+      order: 999
+
+release:
+  github:
+    owner: adrianolaselva
+    name: dataql
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## DataQL {{ .Tag }}
+
+    Universal Data Query Tool - Query any data format with SQL
+
+  footer: |
+    ## Installation
+
+    ### Linux / macOS
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash
+    ```
+
+    ### Windows (PowerShell)
+    ```powershell
+    irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
+    ```
+
+    ### Manual Download
+    Download the appropriate binary for your platform from the assets below.
+
+    ---
+    **Full Changelog**: https://github.com/adrianolaselva/dataql/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+# Homebrew formula (optional, for future)
+# brews:
+#   - repository:
+#       owner: adrianolaselva
+#       name: homebrew-tap
+#     homepage: https://github.com/adrianolaselva/dataql
+#     description: Universal Data Query Tool - Query any data format with SQL
+#     license: MIT
+#     install: |
+#       bin.install "dataql"

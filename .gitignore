@@ -7,3 +7,15 @@ cp.out
 *.csv
 *.jsonl
 *.db
+
+# Don't ignore test fixtures
+!tests/fixtures/**/*.csv
+!tests/fixtures/**/*.jsonl
+!tests/fixtures/**/*.db
+!tests/fixtures/**/*.xlsx
+!tests/fixtures/**/*.parquet
+!tests/fixtures/**/*.avro
+!tests/fixtures/**/*.orc
+!tests/fixtures/**/*.xml
+!tests/fixtures/**/*.yaml
+!tests/fixtures/**/*.json

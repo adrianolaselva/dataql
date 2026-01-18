@@ -46,7 +46,7 @@ func TestDetectFormat(t *testing.T) {
 		},
 		{
 			name:     "unsupported format",
-			filePath: "/path/to/file.xml",
+			filePath: "/path/to/file.xyz",
 			expected: "",
 			wantErr:  true,
 		},
@@ -104,7 +104,7 @@ func TestDetectFormatFromFiles(t *testing.T) {
 		},
 		{
 			name:     "unsupported format in list",
-			files:    []string{"/path/to/file.xml"},
+			files:    []string{"/path/to/file.xyz"},
 			expected: "",
 			wantErr:  true,
 		},
@@ -139,8 +139,13 @@ func TestIsFormatSupported(t *testing.T) {
 		{"CSV", true},
 		{"json", true},
 		{"jsonl", true},
-		{"xml", false},
-		{"parquet", false},
+		{"xml", true},
+		{"parquet", true},
+		{"yaml", true},
+		{"avro", true},
+		{"orc", true},
+		{"excel", true},
+		{"xyz", false},
 		{"", false},
 	}
 

@@ -130,15 +130,22 @@ get_latest_version() {
     echo "$latest"
 }
 
+# Global temp directory for cleanup
+TMP_DIR=""
+
+cleanup() {
+    if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
+        rm -rf "$TMP_DIR"
+    fi
+}
+
 # Download and verify the binary
 download_binary() {
     local version="$1"
     local os="$2"
     local arch="$3"
-    local tmp_dir
 
-    tmp_dir=$(mktemp -d)
-    trap "rm -rf $tmp_dir" EXIT
+    TMP_DIR=$(mktemp -d)
 
     local archive_name="${BINARY_NAME}_${version#v}_${os}_${arch}.tar.gz"
     local download_url="${GITHUB_DOWNLOAD}/${version}/${archive_name}"
@@ -147,22 +154,22 @@ download_binary() {
     info "Downloading ${BINARY_NAME} ${version} for ${os}/${arch}..."
 
     # Download archive
-    if ! curl -fsSL "$download_url" -o "${tmp_dir}/${archive_name}"; then
+    if ! curl -fsSL "$download_url" -o "${TMP_DIR}/${archive_name}"; then
         die "Failed to download ${download_url}"
     fi
 
     # Download and verify checksum if available
-    if curl -fsSL "$checksums_url" -o "${tmp_dir}/checksums.txt" 2>/dev/null; then
+    if curl -fsSL "$checksums_url" -o "${TMP_DIR}/checksums.txt" 2>/dev/null; then
         info "Verifying checksum..."
         local expected_checksum
-        expected_checksum=$(grep "${archive_name}" "${tmp_dir}/checksums.txt" | awk '{print $1}')
+        expected_checksum=$(grep "${archive_name}" "${TMP_DIR}/checksums.txt" | awk '{print $1}')
 
         if [ -n "$expected_checksum" ]; then
             local actual_checksum
             if command -v sha256sum &> /dev/null; then
-                actual_checksum=$(sha256sum "${tmp_dir}/${archive_name}" | awk '{print $1}')
+                actual_checksum=$(sha256sum "${TMP_DIR}/${archive_name}" | awk '{print $1}')
             elif command -v shasum &> /dev/null; then
-                actual_checksum=$(shasum -a 256 "${tmp_dir}/${archive_name}" | awk '{print $1}')
+                actual_checksum=$(shasum -a 256 "${TMP_DIR}/${archive_name}" | awk '{print $1}')
             fi
 
             if [ "$expected_checksum" != "$actual_checksum" ]; then
@@ -176,13 +183,13 @@ download_binary() {
 
     # Extract archive
     info "Extracting archive..."
-    tar -xzf "${tmp_dir}/${archive_name}" -C "${tmp_dir}"
+    tar -xzf "${TMP_DIR}/${archive_name}" -C "${TMP_DIR}"
 
     # Find the binary
-    local binary_path="${tmp_dir}/${BINARY_NAME}"
+    local binary_path="${TMP_DIR}/${BINARY_NAME}"
     if [ ! -f "$binary_path" ]; then
         # Try to find it in a subdirectory
-        binary_path=$(find "${tmp_dir}" -name "${BINARY_NAME}" -type f | head -1)
+        binary_path=$(find "${TMP_DIR}" -name "${BINARY_NAME}" -type f | head -1)
     fi
 
     if [ ! -f "$binary_path" ]; then
@@ -300,6 +307,7 @@ parse_args() {
 
 # Main installation function
 main() {
+    trap cleanup EXIT
     parse_args "$@"
 
     print_banner

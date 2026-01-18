@@ -36,6 +36,9 @@ VERSION=""
 LOCAL_INSTALL=false
 FORCE=false
 
+# Global temp directory
+TMP_DIR=""
+
 # Print functions
 print_banner() {
     echo -e "${CYAN}"
@@ -50,15 +53,15 @@ print_banner() {
 }
 
 info() {
-    echo -e "${BLUE}[INFO]${NC} $1" >&2
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
 success() {
-    echo -e "${GREEN}[OK]${NC} $1" >&2
+    echo -e "${GREEN}[OK]${NC} $1"
 }
 
 warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1" >&2
+    echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
 error() {
@@ -68,6 +71,12 @@ error() {
 die() {
     error "$1"
     exit 1
+}
+
+cleanup() {
+    if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
+        rm -rf "$TMP_DIR"
+    fi
 }
 
 # Check for required commands
@@ -128,104 +137,6 @@ get_latest_version() {
     fi
 
     echo "$latest"
-}
-
-# Global temp directory for cleanup
-TMP_DIR=""
-
-cleanup() {
-    if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
-        rm -rf "$TMP_DIR"
-    fi
-}
-
-# Download and verify the binary
-download_binary() {
-    local version="$1"
-    local os="$2"
-    local arch="$3"
-
-    TMP_DIR=$(mktemp -d)
-
-    local archive_name="${BINARY_NAME}_${version#v}_${os}_${arch}.tar.gz"
-    local download_url="${GITHUB_DOWNLOAD}/${version}/${archive_name}"
-    local checksums_url="${GITHUB_DOWNLOAD}/${version}/checksums.txt"
-
-    info "Downloading ${BINARY_NAME} ${version} for ${os}/${arch}..."
-
-    # Download archive
-    if ! curl -fsSL "$download_url" -o "${TMP_DIR}/${archive_name}"; then
-        die "Failed to download ${download_url}"
-    fi
-
-    # Download and verify checksum if available
-    if curl -fsSL "$checksums_url" -o "${TMP_DIR}/checksums.txt" 2>/dev/null; then
-        info "Verifying checksum..."
-        local expected_checksum
-        expected_checksum=$(grep "${archive_name}" "${TMP_DIR}/checksums.txt" | awk '{print $1}')
-
-        if [ -n "$expected_checksum" ]; then
-            local actual_checksum
-            if command -v sha256sum &> /dev/null; then
-                actual_checksum=$(sha256sum "${TMP_DIR}/${archive_name}" | awk '{print $1}')
-            elif command -v shasum &> /dev/null; then
-                actual_checksum=$(shasum -a 256 "${TMP_DIR}/${archive_name}" | awk '{print $1}')
-            fi
-
-            if [ "$expected_checksum" != "$actual_checksum" ]; then
-                die "Checksum verification failed!"
-            fi
-            success "Checksum verified"
-        fi
-    else
-        warn "Checksums not available, skipping verification"
-    fi
-
-    # Extract archive
-    info "Extracting archive..."
-    tar -xzf "${TMP_DIR}/${archive_name}" -C "${TMP_DIR}"
-
-    # Find the binary
-    local binary_path="${TMP_DIR}/${BINARY_NAME}"
-    if [ ! -f "$binary_path" ]; then
-        # Try to find it in a subdirectory
-        binary_path=$(find "${TMP_DIR}" -name "${BINARY_NAME}" -type f | head -1)
-    fi
-
-    if [ ! -f "$binary_path" ]; then
-        die "Binary not found in archive"
-    fi
-
-    echo "$binary_path"
-}
-
-# Install the binary
-install_binary() {
-    local binary_path="$1"
-    local install_dir="$2"
-
-    # Create install directory if needed
-    if [ ! -d "$install_dir" ]; then
-        if [ "$LOCAL_INSTALL" = true ]; then
-            mkdir -p "$install_dir"
-        else
-            sudo mkdir -p "$install_dir"
-        fi
-    fi
-
-    local dest="${install_dir}/${BINARY_NAME}"
-
-    info "Installing to ${dest}..."
-
-    if [ "$LOCAL_INSTALL" = true ]; then
-        cp "$binary_path" "$dest"
-        chmod +x "$dest"
-    else
-        sudo cp "$binary_path" "$dest"
-        sudo chmod +x "$dest"
-    fi
-
-    success "Installed successfully!"
 }
 
 # Check if binary is in PATH
@@ -308,6 +219,7 @@ parse_args() {
 # Main installation function
 main() {
     trap cleanup EXIT
+
     parse_args "$@"
 
     print_banner
@@ -345,15 +257,84 @@ main() {
         exit 0
     fi
 
-    # Download and install
-    local binary_path
-    binary_path=$(download_binary "$VERSION" "$os" "$arch")
-    install_binary "$binary_path" "$install_dir"
+    # Create temp directory
+    TMP_DIR=$(mktemp -d)
+
+    # Download
+    local archive_name="${BINARY_NAME}_${VERSION#v}_${os}_${arch}.tar.gz"
+    local download_url="${GITHUB_DOWNLOAD}/${VERSION}/${archive_name}"
+    local checksums_url="${GITHUB_DOWNLOAD}/${VERSION}/checksums.txt"
+
+    info "Downloading ${BINARY_NAME} ${VERSION} for ${os}/${arch}..."
+
+    if ! curl -fsSL "$download_url" -o "${TMP_DIR}/${archive_name}"; then
+        die "Failed to download ${download_url}"
+    fi
+
+    # Verify checksum if available
+    if curl -fsSL "$checksums_url" -o "${TMP_DIR}/checksums.txt" 2>/dev/null; then
+        info "Verifying checksum..."
+        local expected_checksum
+        expected_checksum=$(grep "${archive_name}" "${TMP_DIR}/checksums.txt" | awk '{print $1}')
+
+        if [ -n "$expected_checksum" ]; then
+            local actual_checksum
+            if command -v sha256sum &> /dev/null; then
+                actual_checksum=$(sha256sum "${TMP_DIR}/${archive_name}" | awk '{print $1}')
+            elif command -v shasum &> /dev/null; then
+                actual_checksum=$(shasum -a 256 "${TMP_DIR}/${archive_name}" | awk '{print $1}')
+            fi
+
+            if [ "$expected_checksum" != "$actual_checksum" ]; then
+                die "Checksum verification failed!"
+            fi
+            success "Checksum verified"
+        fi
+    else
+        warn "Checksums not available, skipping verification"
+    fi
+
+    # Extract archive
+    info "Extracting archive..."
+    tar -xzf "${TMP_DIR}/${archive_name}" -C "${TMP_DIR}"
+
+    # Find the binary
+    local binary_path="${TMP_DIR}/${BINARY_NAME}"
+    if [ ! -f "$binary_path" ]; then
+        binary_path=$(find "${TMP_DIR}" -name "${BINARY_NAME}" -type f | head -1)
+    fi
+
+    if [ ! -f "$binary_path" ]; then
+        die "Binary not found in archive"
+    fi
+
+    # Create install directory if needed
+    if [ ! -d "$install_dir" ]; then
+        if [ "$LOCAL_INSTALL" = true ]; then
+            mkdir -p "$install_dir"
+        else
+            sudo mkdir -p "$install_dir"
+        fi
+    fi
+
+    # Install
+    local dest="${install_dir}/${BINARY_NAME}"
+    info "Installing to ${dest}..."
+
+    if [ "$LOCAL_INSTALL" = true ]; then
+        cp "$binary_path" "$dest"
+        chmod +x "$dest"
+    else
+        sudo cp "$binary_path" "$dest"
+        sudo chmod +x "$dest"
+    fi
+
+    success "Installed successfully!"
 
     # Verify installation
-    if [ -x "${install_dir}/${BINARY_NAME}" ]; then
+    if [ -x "${dest}" ]; then
         local installed_version
-        installed_version=$("${install_dir}/${BINARY_NAME}" --version 2>/dev/null | head -1 || echo "$VERSION")
+        installed_version=$("${dest}" --version 2>/dev/null | head -1 || echo "$VERSION")
 
         echo ""
         success "${BINARY_NAME} ${installed_version} installed successfully!"

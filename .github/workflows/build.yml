@@ -1,4 +1,4 @@
-name: build-csvql
+name: build-dataql
 on:
   push:
     branches: [ main ]
@@ -12,14 +12,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        go-version: [1.18]
+        go-version: ['1.24']
         os: [ubuntu-latest]
     steps:
       - name: install-golang
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
       - name: checkout-code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: build-application
-        run: go build -o ./build/${{ matrix.os }}/csvql -v ./
+        run: go build -o ./build/${{ matrix.os }}/dataql -v ./

@@ -2,6 +2,7 @@ package xml
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/adrianolaselva/dataql/pkg/filehandler"
 	"github.com/adrianolaselva/dataql/pkg/storage"
@@ -19,7 +19,6 @@ import (
 var nonAlphanumericRegex = regexp.MustCompile(`[^a-zA-Z0-9_ ]+`)
 
 type xmlHandler struct {
-	mx          sync.Mutex
 	bar         *progressbar.ProgressBar
 	storage     storage.Storage
 	fileInputs  []string
@@ -88,7 +87,7 @@ func (x *xmlHandler) parseXML(content []byte) ([]map[string]string, error) {
 
 	for {
 		token, err := decoder.Token()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -180,7 +179,7 @@ func (x *xmlHandler) parseAsSingleObject(content []byte) (map[string]string, err
 
 	for {
 		token, err := decoder.Token()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

@@ -3,6 +3,7 @@ package dbconnector
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -118,7 +119,7 @@ func (m *MongoDBConnector) GetTableSchema(tableName string) ([]ColumnInfo, error
 	var doc bson.M
 	err := coll.FindOne(ctx, bson.M{}).Decode(&doc)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			return []ColumnInfo{}, nil
 		}
 		return nil, fmt.Errorf("failed to get document for schema: %w", err)

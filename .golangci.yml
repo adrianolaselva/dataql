@@ -17,7 +17,6 @@ linters:
     - ineffassign
     - whitespace
   disable:
-    - structcheck # https://github.com/golangci/golangci-lint/issues/2649
     - cyclop # Too many false positives for complex but necessary functions
     - wrapcheck # Too strict for this codebase
     - exhaustive # Too strict for switch statements

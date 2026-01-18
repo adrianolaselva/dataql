@@ -10,21 +10,15 @@ before:
     - go mod tidy
 
 builds:
-  - id: dataql
+  - id: dataql-linux
     main: ./main.go
     binary: dataql
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     goos:
       - linux
-      - darwin
-      - windows
     goarch:
       - amd64
-      - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
     ldflags:
       - -s -w
       - -X github.com/adrianolaselva/dataql/cmd.Version={{.Version}}
@@ -35,9 +29,6 @@ archives:
   - id: default
     format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
       - LICENSE*
       - README*
@@ -91,29 +82,17 @@ release:
   footer: |
     ## Installation
 
-    ### Linux / macOS
+    ### Linux (amd64)
     ```bash
     curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash
     ```
 
-    ### Windows (PowerShell)
-    ```powershell
-    irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
+    ### From Source (all platforms)
+    ```bash
+    git clone https://github.com/adrianolaselva/dataql.git
+    cd dataql
+    make build
     ```
-
-    ### Manual Download
-    Download the appropriate binary for your platform from the assets below.
 
     ---
     **Full Changelog**: https://github.com/adrianolaselva/dataql/compare/{{ .PreviousTag }}...{{ .Tag }}
-
-# Homebrew formula (optional, for future)
-# brews:
-#   - repository:
-#       owner: adrianolaselva
-#       name: homebrew-tap
-#     homepage: https://github.com/adrianolaselva/dataql
-#     description: Universal Data Query Tool - Query any data format with SQL
-#     license: MIT
-#     install: |
-#       bin.install "dataql"

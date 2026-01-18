@@ -1,8 +1,8 @@
 # DataQL
 
-[![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](https://go.dev)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev)
 [![Build](https://github.com/adrianolaselva/dataql/actions/workflows/build.yml/badge.svg)](https://github.com/adrianolaselva/dataql/actions/workflows/build.yml)
-[![Tests](https://github.com/adrianolaselva/dataql/actions/workflows/test.yml/badge.svg)](https://github.com/adrianolaselva/dataql/actions/workflows/test.yml)
+[![CI](https://github.com/adrianolaselva/dataql/actions/workflows/ci.yml/badge.svg)](https://github.com/adrianolaselva/dataql/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/adrianolaselva/dataql)](https://goreportcard.com/report/github.com/adrianolaselva/dataql)
 [![GoDoc](https://godoc.org/github.com/adrianolaselva/dataql?status.svg)](https://pkg.go.dev/github.com/adrianolaselva/dataql)
 ![GitHub issues](https://img.shields.io/github/issues/adrianolaselva/dataql)

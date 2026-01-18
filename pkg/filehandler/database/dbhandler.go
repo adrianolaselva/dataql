@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/adrianolaselva/dataql/pkg/dbconnector"
 	"github.com/adrianolaselva/dataql/pkg/filehandler"
@@ -27,7 +26,6 @@ type ConnectionInfo struct {
 }
 
 type dbHandler struct {
-	mx          sync.Mutex
 	bar         *progressbar.ProgressBar
 	storage     storage.Storage
 	connInfo    ConnectionInfo

@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/adrianolaselva/dataql/pkg/filehandler"
 	"github.com/adrianolaselva/dataql/pkg/storage"
@@ -16,7 +15,6 @@ import (
 var nonAlphanumericRegex = regexp.MustCompile(`[^a-zA-Z0-9_ ]+`)
 
 type orcHandler struct {
-	mx          sync.Mutex
 	bar         *progressbar.ProgressBar
 	storage     storage.Storage
 	files       []string

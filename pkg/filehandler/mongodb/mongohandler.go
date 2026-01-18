@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/adrianolaselva/dataql/pkg/dbconnector"
 	"github.com/adrianolaselva/dataql/pkg/filehandler"
@@ -28,7 +27,6 @@ type ConnectionInfo struct {
 }
 
 type mongoHandler struct {
-	mx          sync.Mutex
 	bar         *progressbar.ProgressBar
 	storage     storage.Storage
 	connInfo    ConnectionInfo

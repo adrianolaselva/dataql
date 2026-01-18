@@ -3,8 +3,6 @@ package e2e_test
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -149,14 +147,4 @@ func TestURL_WithLineLimit(t *testing.T) {
 
 	assertNoError(t, err, stderr)
 	assertContains(t, stdout, "5")
-}
-
-// Helper to create a test CSV file at a specific path
-func createTestCSV(t *testing.T, dir, name, content string) string {
-	t.Helper()
-	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
-	return path
 }

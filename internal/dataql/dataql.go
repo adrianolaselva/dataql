@@ -13,20 +13,20 @@ import (
 	"time"
 
 	"github.com/adrianolaselva/dataql/internal/exportdata"
+	"github.com/adrianolaselva/dataql/pkg/azurehandler"
 	"github.com/adrianolaselva/dataql/pkg/filehandler"
+	avroHandler "github.com/adrianolaselva/dataql/pkg/filehandler/avro"
 	csvHandler "github.com/adrianolaselva/dataql/pkg/filehandler/csv"
 	databaseHandler "github.com/adrianolaselva/dataql/pkg/filehandler/database"
 	excelHandler "github.com/adrianolaselva/dataql/pkg/filehandler/excel"
-	mongodbHandler "github.com/adrianolaselva/dataql/pkg/filehandler/mongodb"
 	jsonHandler "github.com/adrianolaselva/dataql/pkg/filehandler/json"
 	jsonlHandler "github.com/adrianolaselva/dataql/pkg/filehandler/jsonl"
+	mongodbHandler "github.com/adrianolaselva/dataql/pkg/filehandler/mongodb"
+	orcHandler "github.com/adrianolaselva/dataql/pkg/filehandler/orc"
 	parquetHandler "github.com/adrianolaselva/dataql/pkg/filehandler/parquet"
+	sqliteHandler "github.com/adrianolaselva/dataql/pkg/filehandler/sqlitedb"
 	xmlHandler "github.com/adrianolaselva/dataql/pkg/filehandler/xml"
 	yamlHandler "github.com/adrianolaselva/dataql/pkg/filehandler/yaml"
-	avroHandler "github.com/adrianolaselva/dataql/pkg/filehandler/avro"
-	orcHandler "github.com/adrianolaselva/dataql/pkg/filehandler/orc"
-	sqliteHandler "github.com/adrianolaselva/dataql/pkg/filehandler/sqlitedb"
-	"github.com/adrianolaselva/dataql/pkg/azurehandler"
 	"github.com/adrianolaselva/dataql/pkg/gcshandler"
 	"github.com/adrianolaselva/dataql/pkg/repl"
 	"github.com/adrianolaselva/dataql/pkg/s3handler"
@@ -86,7 +86,7 @@ func New(params Params) (DataQL, error) {
 	verboseLog(params.Verbose, "Checking for stdin input...")
 	resolvedFiles, err := stdinH.ResolveFiles(params.FileInputs, params.InputFormat)
 	if err != nil {
-		stdinH.Cleanup()
+		_ = stdinH.Cleanup()
 		return nil, fmt.Errorf("failed to read stdin: %w", err)
 	}
 	params.FileInputs = resolvedFiles
@@ -98,8 +98,8 @@ func New(params Params) (DataQL, error) {
 	verboseLog(params.Verbose, "Resolving HTTP/HTTPS URLs...")
 	resolvedFiles, err = urlH.ResolveFiles(params.FileInputs)
 	if err != nil {
-		stdinH.Cleanup()
-		urlH.Cleanup() // Clean up any downloaded files on error
+		_ = stdinH.Cleanup()
+		_ = urlH.Cleanup() // Clean up any downloaded files on error
 		return nil, fmt.Errorf("failed to resolve file inputs: %w", err)
 	}
 	params.FileInputs = resolvedFiles
@@ -111,9 +111,9 @@ func New(params Params) (DataQL, error) {
 	verboseLog(params.Verbose, "Resolving S3 URLs...")
 	resolvedFiles, err = s3H.ResolveFiles(params.FileInputs)
 	if err != nil {
-		stdinH.Cleanup()
-		urlH.Cleanup()
-		s3H.Cleanup()
+		_ = stdinH.Cleanup()
+		_ = urlH.Cleanup()
+		_ = s3H.Cleanup()
 		return nil, fmt.Errorf("failed to resolve S3 inputs: %w", err)
 	}
 	params.FileInputs = resolvedFiles
@@ -125,10 +125,10 @@ func New(params Params) (DataQL, error) {
 	verboseLog(params.Verbose, "Resolving GCS URLs...")
 	resolvedFiles, err = gcsH.ResolveFiles(params.FileInputs)
 	if err != nil {
-		stdinH.Cleanup()
-		urlH.Cleanup()
-		s3H.Cleanup()
-		gcsH.Cleanup()
+		_ = stdinH.Cleanup()
+		_ = urlH.Cleanup()
+		_ = s3H.Cleanup()
+		_ = gcsH.Cleanup()
 		return nil, fmt.Errorf("failed to resolve GCS inputs: %w", err)
 	}
 	params.FileInputs = resolvedFiles
@@ -140,11 +140,11 @@ func New(params Params) (DataQL, error) {
 	verboseLog(params.Verbose, "Resolving Azure Blob URLs...")
 	resolvedFiles, err = azureH.ResolveFiles(params.FileInputs)
 	if err != nil {
-		stdinH.Cleanup()
-		urlH.Cleanup()
-		s3H.Cleanup()
-		gcsH.Cleanup()
-		azureH.Cleanup()
+		_ = stdinH.Cleanup()
+		_ = urlH.Cleanup()
+		_ = s3H.Cleanup()
+		_ = gcsH.Cleanup()
+		_ = azureH.Cleanup()
 		return nil, fmt.Errorf("failed to resolve Azure inputs: %w", err)
 	}
 	params.FileInputs = resolvedFiles
@@ -153,11 +153,11 @@ func New(params Params) (DataQL, error) {
 	verboseLog(params.Verbose, "Initializing SQLite storage...")
 	sqLiteStorage, err := sqlite.NewSqLiteStorage(params.DataSourceName)
 	if err != nil {
-		stdinH.Cleanup()
-		urlH.Cleanup()
-		s3H.Cleanup()
-		gcsH.Cleanup()
-		azureH.Cleanup()
+		_ = stdinH.Cleanup()
+		_ = urlH.Cleanup()
+		_ = s3H.Cleanup()
+		_ = gcsH.Cleanup()
+		_ = azureH.Cleanup()
 		return nil, fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
@@ -178,11 +178,11 @@ func New(params Params) (DataQL, error) {
 	verboseLog(params.Verbose, "Creating file handler...")
 	handler, err := createFileHandler(params, bar, sqLiteStorage)
 	if err != nil {
-		stdinH.Cleanup()
-		urlH.Cleanup()
-		s3H.Cleanup()
-		gcsH.Cleanup()
-		azureH.Cleanup()
+		_ = stdinH.Cleanup()
+		_ = urlH.Cleanup()
+		_ = s3H.Cleanup()
+		_ = gcsH.Cleanup()
+		_ = azureH.Cleanup()
 		return nil, fmt.Errorf("failed to create file handler: %w", err)
 	}
 
@@ -718,7 +718,6 @@ func (d *dataQL) printPaginatedRows(rows *sql.Rows, columns []string, cols []int
 			tbl.AddRow(pendingRow...)
 			rowCount++
 			pageRows++
-			pendingRow = nil
 		}
 
 		// Read more rows for this page

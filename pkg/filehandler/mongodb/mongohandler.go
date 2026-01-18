@@ -174,7 +174,8 @@ func (m *mongoHandler) Close() error {
 
 // ParseMongoDBURL parses a MongoDB URL and returns connection info
 // Format: mongodb://user:password@host:port/database/collection
-//         mongodb+srv://user:password@host/database/collection
+//
+//	mongodb+srv://user:password@host/database/collection
 func ParseMongoDBURL(urlStr string) (*ConnectionInfo, error) {
 	// Remove the mongodb:// or mongodb+srv:// prefix for parsing
 	if !strings.HasPrefix(urlStr, "mongodb://") && !strings.HasPrefix(urlStr, "mongodb+srv://") {

@@ -1,9 +1,9 @@
 package dataqlctl_test
 
 import (
-	"github.com/adrianolaselva/dataql/cmd/dataqlctl"
 	"bytes"
 	"fmt"
+	"github.com/adrianolaselva/dataql/cmd/dataqlctl"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path/filepath"

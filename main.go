@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/adrianolaselva/dataql/cmd"
 	"fmt"
+	"github.com/adrianolaselva/dataql/cmd"
 	"os"
 )
 

@@ -312,17 +312,3 @@ func (c *csvHandler) openFiles() error {
 
 	return nil
 }
-
-// loadTotalRows is deprecated, use countTotalRows instead
-func (c *csvHandler) loadTotalRows(file string) error {
-	lines, err := c.countFileLines(file)
-	if err != nil {
-		return err
-	}
-
-	c.mx.Lock()
-	c.totalLines += lines
-	c.mx.Unlock()
-
-	return nil
-}

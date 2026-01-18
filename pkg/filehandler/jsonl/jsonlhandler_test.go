@@ -247,7 +247,7 @@ func TestJsonlHandler_Import_MultipleFiles(t *testing.T) {
 	require.NoError(t, err)
 	var count1 int
 	rows1.Next()
-	rows1.Scan(&count1)
+	require.NoError(t, rows1.Scan(&count1))
 	rows1.Close()
 	assert.Equal(t, 2, count1)
 
@@ -255,7 +255,7 @@ func TestJsonlHandler_Import_MultipleFiles(t *testing.T) {
 	require.NoError(t, err)
 	var count2 int
 	rows2.Next()
-	rows2.Scan(&count2)
+	require.NoError(t, rows2.Scan(&count2))
 	rows2.Close()
 	assert.Equal(t, 2, count2)
 }

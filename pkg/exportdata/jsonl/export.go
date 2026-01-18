@@ -1,11 +1,11 @@
 package jsonl
 
 import (
-	"github.com/adrianolaselva/dataql/pkg/exportdata"
 	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/adrianolaselva/dataql/pkg/exportdata"
 	"github.com/schollz/progressbar/v3"
 	"os"
 	"path/filepath"

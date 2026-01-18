@@ -9,30 +9,6 @@ import (
 
 // DuckDB tests use a temporary database file that we create and populate
 
-func setupDuckDBTestDB(t *testing.T) string {
-	t.Helper()
-
-	// Create temp directory for test database
-	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "test.db")
-
-	// Use duckdb CLI or create via the binary itself
-	// For now, we'll create a simple test by first creating data via CSV import
-	// then querying via DuckDB
-
-	// Create a CSV file to import
-	csvPath := filepath.Join(tmpDir, "users.csv")
-	csvContent := `id,name,email,age
-1,Alice,alice@example.com,30
-2,Bob,bob@example.com,25
-3,Charlie,charlie@example.com,35`
-	if err := os.WriteFile(csvPath, []byte(csvContent), 0644); err != nil {
-		t.Fatalf("Failed to create CSV file: %v", err)
-	}
-
-	return dbPath
-}
-
 func TestDuckDB_InvalidURL(t *testing.T) {
 	_, stderr, err := runDataQL(t, "run", "-f", "duckdb://invalid", "-q", "SELECT * FROM data")
 	if err == nil {

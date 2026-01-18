@@ -185,7 +185,8 @@ func (d *dbHandler) Close() error {
 
 // ParseDatabaseURL parses a database URL and returns connection info
 // Format: postgres://user:password@host:port/database/table
-//         mysql://user:password@host:port/database/table
+//
+//	mysql://user:password@host:port/database/table
 func ParseDatabaseURL(urlStr string) (*ConnectionInfo, error) {
 	var dbType dbconnector.DBType
 	var rest string
@@ -197,7 +198,6 @@ func ParseDatabaseURL(urlStr string) (*ConnectionInfo, error) {
 		dbType = dbconnector.DBTypeMySQL
 		rest = strings.TrimPrefix(urlStr, "mysql://")
 	} else if strings.HasPrefix(urlStr, "duckdb://") {
-		dbType = dbconnector.DBTypeDuckDB
 		rest = strings.TrimPrefix(urlStr, "duckdb://")
 		return parseDuckDBURL(rest)
 	} else {
@@ -243,7 +243,7 @@ func ParseDatabaseURL(urlStr string) (*ConnectionInfo, error) {
 	// Parse host:port
 	if colonIdx := strings.LastIndex(hostPort, ":"); colonIdx != -1 {
 		info.Host = hostPort[:colonIdx]
-		fmt.Sscanf(hostPort[colonIdx+1:], "%d", &info.Port)
+		_, _ = fmt.Sscanf(hostPort[colonIdx+1:], "%d", &info.Port)
 	} else {
 		info.Host = hostPort
 	}

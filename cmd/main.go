@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/adrianolaselva/dataql/cmd/dataqlctl"
 	"fmt"
+	"github.com/adrianolaselva/dataql/cmd/dataqlctl"
 	"github.com/spf13/cobra"
 	"syscall"
 )

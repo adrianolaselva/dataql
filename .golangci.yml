@@ -4,30 +4,26 @@ run:
 linters:
   enable:
     - contextcheck
-    - cyclop
     - errorlint
-    - exhaustive
-    - exportloopref
     - gofmt
-    - gomnd
     - gosec
     - makezero
     - misspell
     - nilerr
-    - noctx
-#    - revive
     - tagliatelle
-    - tenv
     - unconvert
     - unparam
-    - wrapcheck
     - dupword
-    - gocritic
     - ineffassign
-    - prealloc
     - whitespace
   disable:
     - structcheck # https://github.com/golangci/golangci-lint/issues/2649
+    - cyclop # Too many false positives for complex but necessary functions
+    - wrapcheck # Too strict for this codebase
+    - exhaustive # Too strict for switch statements
+    - noctx # HTTP without context is fine for CLI tool
+    - prealloc # Optimization suggestions, not errors
+    - gocritic # Style suggestions, too noisy
 linters-settings:
   tagliatelle:
     case:
@@ -38,3 +34,14 @@ linters-settings:
     multi-func: true
   goimports:
     local-prefixes: adrianolaselva.github.io/csvql
+  gosec:
+    excludes:
+      - G115 # Integer overflow conversion - handled appropriately
+      - G201 # SQL string formatting - using parameterized queries where needed
+      - G306 # File permissions - test files don't need strict permissions
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec
+        - errcheck

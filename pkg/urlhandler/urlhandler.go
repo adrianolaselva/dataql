@@ -13,8 +13,8 @@ import (
 
 // URLHandler handles downloading files from URLs
 type URLHandler struct {
-	client   *http.Client
-	tempDir  string
+	client    *http.Client
+	tempDir   string
 	tempFiles []string
 }
 

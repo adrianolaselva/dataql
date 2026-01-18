@@ -1,9 +1,9 @@
 package sqlite
 
 import (
-	"github.com/adrianolaselva/dataql/pkg/storage"
 	"database/sql"
 	"fmt"
+	"github.com/adrianolaselva/dataql/pkg/storage"
 	_ "github.com/mattn/go-sqlite3"
 	"strings"
 )

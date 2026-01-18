@@ -1,10 +1,10 @@
 package csv
 
 import (
-	"github.com/adrianolaselva/dataql/pkg/exportdata"
 	"database/sql"
 	"encoding/csv"
 	"fmt"
+	"github.com/adrianolaselva/dataql/pkg/exportdata"
 	"github.com/schollz/progressbar/v3"
 	"os"
 	"path/filepath"

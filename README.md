@@ -13,6 +13,50 @@
 DataQL is a CLI tool developed in Go that allows you to query and manipulate data files using SQL statements.
 It loads data into an SQLite database (in-memory or file-based) enabling powerful SQL operations on your data.
 
+## Why DataQL?
+
+### The Problem
+
+Working with data files has always been tedious. You either write throwaway scripts, load everything into pandas, or copy-paste into spreadsheets. With LLMs entering the workflow, a new problem emerged: **how do you analyze a 10MB CSV without burning through your entire context window?**
+
+Traditional approaches fail:
+- **Send file to LLM context**: 10MB CSV = ~100,000+ tokens. Expensive, slow, often impossible.
+- **Write a script**: Context switch, setup overhead, not conversational.
+- **Use pandas/Excel**: Great for humans, useless for LLM automation.
+
+### The Solution
+
+DataQL lets you query any data file using SQL. One command, instant results:
+
+```bash
+# Instead of sending 50,000 rows to an LLM...
+dataql run -f sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY region"
+
+# You get just what you need:
+# region    | SUM(revenue)
+# North     | 1,234,567
+# South     | 987,654
+```
+
+### Why This Matters
+
+| Scenario | Without DataQL | With DataQL |
+|----------|---------------|-------------|
+| Analyze 10MB CSV with LLM | ~100,000 tokens ($3+) | ~500 tokens ($0.01) |
+| Query data from S3 | Download → Script → Parse | One command |
+| Join CSV + JSON + Database | Custom ETL pipeline | Single SQL query |
+| Automate data reports | Complex scripts | Simple CLI + cron |
+| LLM data analysis | Context overflow | No size limit |
+
+### Key Benefits
+
+- **Token Efficient**: LLMs get query results, not raw data. 99% reduction in token usage.
+- **Universal Format Support**: CSV, JSON, Parquet, Excel, XML, YAML, Avro, ORC - all queryable with SQL.
+- **Any Data Source**: Local files, URLs, S3, GCS, Azure, PostgreSQL, MySQL, MongoDB.
+- **LLM-Native**: Built-in MCP server for Claude, Codex, Gemini. Skills for Claude Code.
+- **Zero Setup**: Single binary, no dependencies, no configuration files.
+- **Familiar Syntax**: If you know SQL, you know DataQL.
+
 ## Features
 
 **Supported File Formats:**
@@ -48,6 +92,33 @@ It loads data into an SQLite database (in-memory or file-based) enabling powerfu
 - Parallel file processing for multiple inputs
 - Automatic flattening of nested JSON objects
 - Join data from multiple sources
+
+**LLM Integration:**
+- MCP Server for Claude Code, OpenAI Codex, Google Gemini
+- Auto-activating Claude Code Skills
+- Token-efficient data processing for AI assistants
+
+## LLM Integration
+
+DataQL is designed for efficient use with Large Language Models, enabling AI assistants to query large datasets without loading entire files into context.
+
+```bash
+# Install skills for Claude Code
+dataql skills install
+
+# Or start MCP server for any LLM
+dataql mcp serve
+```
+
+**Why use DataQL with LLMs?**
+
+| Traditional Approach | With DataQL |
+|---------------------|-------------|
+| Send 10MB CSV to context | Run SQL query |
+| ~100,000+ tokens | ~500 tokens |
+| Limited by context window | No file size limit |
+
+See [LLM Integration Guide](docs/llm-integration.md) for complete documentation.
 
 ## Installation
 
@@ -330,6 +401,8 @@ For detailed documentation, see:
 - [CLI Reference](docs/cli-reference.md) - Complete command-line reference
 - [Data Sources](docs/data-sources.md) - Working with S3, GCS, Azure, URLs, and stdin
 - [Database Connections](docs/databases.md) - Connect to PostgreSQL, MySQL, DuckDB, MongoDB
+- [LLM Integration](docs/llm-integration.md) - Use DataQL with Claude, Codex, Gemini
+- [MCP Setup](docs/mcp-setup.md) - Configure MCP server for LLM integration
 - [Examples](docs/examples.md) - Real-world usage examples and automation scripts
 
 ## Development
@@ -367,12 +440,18 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+## About This Project
+
+This is a rewrite of [csvql](https://github.com/adrianolaselva/csvql), an earlier experiment I did back in 2019. The original was simple and limited. This version? Built entirely with AI assistance (Claude Code). I wanted to see how far AI-assisted development could go, and honestly, it went pretty far. The code, docs, tests - all of it came from conversations with an AI. Make of that what you will.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
+- [csvql](https://github.com/adrianolaselva/csvql) - The original project that inspired this rewrite
+- [Claude Code](https://claude.ai/claude-code) - AI assistant that helped build this entire project
 - [SQLite](https://www.sqlite.org/) - Embedded database engine
 - [Cobra](https://github.com/spf13/cobra) - CLI framework
 - [go-sqlite3](https://github.com/mattn/go-sqlite3) - SQLite driver for Go

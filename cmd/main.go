@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/adrianolaselva/dataql/cmd/dataqlctl"
-	"github.com/spf13/cobra"
 	"syscall"
+
+	"github.com/adrianolaselva/dataql/cmd/dataqlctl"
+	"github.com/adrianolaselva/dataql/cmd/mcpctl"
+	"github.com/adrianolaselva/dataql/cmd/skillsctl"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -48,6 +51,12 @@ func (c *cliBase) Execute() error {
 	}
 
 	c.rootCmd.AddCommand(dataQlCtl)
+
+	// Add skills command for Claude Code integration
+	c.rootCmd.AddCommand(skillsctl.New().Command())
+
+	// Add MCP server command for LLM integration
+	c.rootCmd.AddCommand(mcpctl.New().Command())
 
 	if err := c.rootCmd.Execute(); err != nil {
 		return fmt.Errorf("failed to execute command %w", err)

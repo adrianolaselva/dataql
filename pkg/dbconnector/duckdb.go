@@ -1,3 +1,5 @@
+//go:build !noduckdb
+
 package dbconnector
 
 import (

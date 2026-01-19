@@ -19,6 +19,10 @@ builds:
       - linux
     goarch:
       - amd64
+    # Exclude DuckDB to avoid GLIBC compatibility issues
+    # Users who need DuckDB can build from source
+    tags:
+      - noduckdb
     ldflags:
       - -s -w
       - -X github.com/adrianolaselva/dataql/cmd.Version={{.Version}}
@@ -87,12 +91,15 @@ release:
     curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash
     ```
 
-    ### From Source (all platforms)
+    ### From Source (all platforms, with DuckDB support)
     ```bash
     git clone https://github.com/adrianolaselva/dataql.git
     cd dataql
     make build
     ```
+
+    > **Note:** Pre-built binaries do not include DuckDB support due to GLIBC compatibility.
+    > Build from source for full DuckDB support.
 
     ---
     **Full Changelog**: https://github.com/adrianolaselva/dataql/compare/{{ .PreviousTag }}...{{ .Tag }}

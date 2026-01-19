@@ -12,22 +12,16 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    container:
-      # Use Debian Bullseye for GLIBC 2.31 compatibility
-      image: golang:1.24-bullseye
     steps:
-      - name: Install git and build dependencies
-        run: |
-          apt-get update
-          apt-get install -y git gcc g++ make
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Fix git safe directory
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6

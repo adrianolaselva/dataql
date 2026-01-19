@@ -22,6 +22,7 @@ require (
 	github.com/rodaine/table v1.3.0
 	github.com/schollz/progressbar/v3 v3.17.1
 	github.com/scritchley/orc v0.0.0-20210513144143-06dddf1ad665
+	github.com/segmentio/kafka-go v0.4.50
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.11.1
 	github.com/xitongsys/parquet-go v1.6.2

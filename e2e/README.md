@@ -2,15 +2,17 @@
 
 This directory contains the complete configuration for local end-to-end testing of DataQL.
 
-## Quick Start
+## Important: E2E Tests Must Be Run Before PRs
+
+**E2E tests are mandatory** before submitting any Pull Request. They ensure that all data source implementations work correctly together.
 
 ```bash
-# From e2e directory
+# Quick workflow
 make up          # Start infrastructure
 make test        # Run all tests
 make down        # Stop infrastructure
 
-# Or full workflow
+# Or full workflow in one command
 make full        # Build, start, test, stop
 ```
 
@@ -39,45 +41,80 @@ e2e/
 ├── .env                   # Environment variables for tests
 ├── README.md              # This file
 ├── scripts/               # Initialization scripts
-│   ├── init-postgres.sql
-│   ├── init-mysql.sql
-│   ├── init-mongodb.js
-│   └── init-localstack.sh
+│   ├── init-postgres.sql  # PostgreSQL schema and data
+│   ├── init-mysql.sql     # MySQL schema and data
+│   ├── init-mongodb.js    # MongoDB collections and data
+│   └── init-localstack.sh # S3/SQS/DynamoDB setup
 └── tests/                 # Test scripts
     ├── test-all.sh        # Run all test suites
-    ├── test-postgres.sh   # PostgreSQL tests
-    ├── test-mysql.sh      # MySQL tests
-    ├── test-mongodb.sh    # MongoDB tests
-    ├── test-s3.sh         # S3 tests (LocalStack)
-    ├── test-sqs.sh        # SQS tests (LocalStack)
-    └── test-kafka.sh      # Kafka tests
+    ├── test-postgres.sh   # PostgreSQL tests (25+ tests)
+    ├── test-mysql.sh      # MySQL tests (25+ tests)
+    ├── test-mongodb.sh    # MongoDB tests (20+ tests)
+    ├── test-kafka.sh      # Kafka tests (10+ tests)
+    ├── test-s3.sh         # S3 tests (skipped - LocalStack limitation)
+    └── test-sqs.sh        # SQS tests (skipped - LocalStack limitation)
 ```
 
 ## Test Commands
 
 ```bash
-# Run all tests
+# Run all tests (recommended)
 make test
 
 # Run specific test suite
-make test-postgres
-make test-mysql
-make test-mongodb
-make test-s3
-make test-sqs
-make test-kafka
+make test-postgres    # PostgreSQL: SELECT, WHERE, ORDER BY, LIMIT, aggregates
+make test-mysql       # MySQL: SELECT, WHERE, ORDER BY, LIMIT, aggregates
+make test-mongodb     # MongoDB: Collections, queries, filters
+make test-kafka       # Kafka: Peek mode, consumer groups, exports
+make test-s3          # S3: Currently skipped (LocalStack limitation)
+make test-sqs         # SQS: Currently skipped (LocalStack limitation)
 ```
+
+## Test Coverage
+
+### PostgreSQL / MySQL Tests
+- Basic SELECT queries (*, specific columns, aliases)
+- WHERE clause operators (=, >, <, AND, OR, IN, LIKE, BETWEEN)
+- ORDER BY (ASC, DESC)
+- LIMIT and OFFSET
+- Aggregate functions (COUNT, SUM, AVG, MIN, MAX)
+- Export formats (CSV, JSONL, JSON)
+- Multiple tables support
+
+### MongoDB Tests
+- SELECT queries on collections
+- WHERE clause with comparison operators
+- ORDER BY
+- LIMIT
+- Aggregate functions (COUNT)
+- Export formats
+- Multiple collections
+
+### Kafka Tests
+- Basic message reading (peek mode - non-destructive)
+- SELECT body fields from JSON messages
+- LIMIT message count
+- Consumer group configuration
+- Export formats
+- Peek mode verification (non-destructive reads)
+
+### S3/SQS Tests
+Currently skipped due to LocalStack limitations:
+- S3: Requires virtual-hosted-style addressing (not supported by LocalStack)
+- SQS: Requires custom endpoint configuration
 
 ## Test Data
 
-All services are initialized with sample data:
+All services are initialized with consistent sample data:
 
-- **PostgreSQL/MySQL**: `test_data`, `users`, `departments` tables (5 rows each)
-- **MongoDB**: `users`, `orders`, `test_data` collections (5 documents each)
-- **S3**: `dataql-test-bucket` with CSV, JSON, JSONL fixtures
-- **SQS**: `dataql-test-queue` with sample JSON messages
-- **DynamoDB**: `dataql-test-table` with sample items
-- **Kafka**: `dataql-test-topic` with JSON messages
+**Users/test_data (5 records):**
+| Name | Email | Age |
+|------|-------|-----|
+| Alice | alice@example.com | 28 |
+| Bob | bob@example.com | 35 |
+| Charlie | charlie@example.com | 42 |
+| Diana | diana@example.com | 31 |
+| Eve | eve@example.com | 25 |
 
 ## Infrastructure Commands
 
@@ -121,14 +158,34 @@ make e2e-down
 
 The `.env` file contains all connection URLs used by tests:
 
-- `DATAQL_TEST_POSTGRES_URL` - PostgreSQL connection
-- `DATAQL_TEST_MYSQL_URL` - MySQL connection
-- `DATAQL_TEST_MONGODB_URL` - MongoDB connection
-- `DATAQL_TEST_KAFKA_URL` - Kafka connection
-- `DATAQL_TEST_S3_CSV` - S3 CSV file
-- `DATAQL_TEST_S3_JSON` - S3 JSON file
-- `DATAQL_TEST_S3_JSONL` - S3 JSONL file
-- `DATAQL_TEST_SQS_URL` - SQS queue
+| Variable | Description |
+|----------|-------------|
+| `DATAQL_TEST_POSTGRES_URL` | PostgreSQL connection |
+| `DATAQL_TEST_MYSQL_URL` | MySQL connection |
+| `DATAQL_TEST_MONGODB_URL` | MongoDB connection |
+| `DATAQL_TEST_KAFKA_URL` | Kafka connection |
+| `DATAQL_TEST_S3_*` | S3 file URLs |
+| `DATAQL_TEST_SQS_URL` | SQS queue URL |
+
+## Adding New Tests
+
+When adding new functionality to DataQL:
+
+1. Create test cases in the appropriate `tests/test-*.sh` file
+2. Follow the existing test structure:
+   ```bash
+   test_your_feature() {
+       log_info "Test: Your test description"
+       result=$($DATAQL_BIN run -q "YOUR QUERY" -f "$URL" 2>&1)
+       if echo "$result" | grep -q "expected"; then
+           log_pass "Feature works correctly"
+       else
+           log_fail "Feature failed" "$result"
+       fi
+   }
+   ```
+3. Add the test function call in the appropriate section
+4. Run the full test suite to ensure no regressions
 
 ## Troubleshooting
 
@@ -140,8 +197,8 @@ make up         # Start fresh
 
 ### Check service logs
 ```bash
-make logs                                    # All services
-docker-compose logs -f postgres              # Specific service
+make logs                           # All services
+docker-compose logs -f postgres     # Specific service
 ```
 
 ### Verify test data
@@ -151,3 +208,30 @@ make verify-data
 
 ### Port conflicts
 If ports conflict with existing services, edit `docker-compose.yaml` to use different external ports.
+
+### Test failures
+1. Ensure services are healthy: `make status`
+2. Check individual service logs: `docker-compose logs <service>`
+3. Verify data was initialized: `make verify-data`
+4. Try resetting the environment: `make reset`
+
+## CI/CD Integration
+
+The e2e tests are designed to be run in CI pipelines:
+
+```yaml
+# Example GitHub Actions workflow
+- name: Start E2E infrastructure
+  run: make e2e-up
+
+- name: Run E2E tests
+  run: make e2e-test
+
+- name: Stop E2E infrastructure
+  run: make e2e-down
+  if: always()
+```
+
+---
+
+**Remember:** Always run `make test` before submitting a PR!

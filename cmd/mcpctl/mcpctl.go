@@ -165,6 +165,24 @@ func registerTools(s *server.MCPServer) {
 		),
 		handleAggregate,
 	)
+
+	// Tool: dataql_mq_peek - Peek at messages in a message queue without consuming them
+	s.AddTool(
+		mcp.NewTool("dataql_mq_peek",
+			mcp.WithDescription("Peek at messages in a message queue (SQS, Kafka, RabbitMQ, etc.) without consuming/deleting them. Messages remain available after reading. Useful for troubleshooting and debugging."),
+			mcp.WithString("source",
+				mcp.Required(),
+				mcp.Description("Queue/topic URL. Examples: sqs://my-queue?region=us-east-1, kafka://broker:9092/topic, rabbitmq://host/queue"),
+			),
+			mcp.WithNumber("max_messages",
+				mcp.Description("Maximum messages to retrieve (default: 10)"),
+			),
+			mcp.WithString("query",
+				mcp.Description("Optional SQL query to filter/transform messages (default: SELECT * FROM <queue_name>)"),
+			),
+		),
+		handleMQPeek,
+	)
 }
 
 // Handler functions
@@ -290,6 +308,98 @@ func handleAggregate(_ context.Context, request mcp.CallToolRequest) (*mcp.CallT
 	}
 
 	return mcp.NewToolResultText(result), nil
+}
+
+func handleMQPeek(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	source := getStringArg(request, "source")
+	if source == "" {
+		return mcp.NewToolResultError("source parameter is required"), nil
+	}
+
+	// Get max_messages parameter
+	maxMessages := 10
+	if args, ok := request.Params.Arguments.(map[string]interface{}); ok {
+		if m, exists := args["max_messages"]; exists {
+			if mf, ok := m.(float64); ok {
+				maxMessages = int(mf)
+				if maxMessages < 1 {
+					maxMessages = 1
+				}
+				if maxMessages > 1000 {
+					maxMessages = 1000
+				}
+			}
+		}
+	}
+
+	// Build the source URL with max_messages if not already present
+	if !strings.Contains(source, "max_messages=") {
+		if strings.Contains(source, "?") {
+			source = fmt.Sprintf("%s&max_messages=%d", source, maxMessages)
+		} else {
+			source = fmt.Sprintf("%s?max_messages=%d", source, maxMessages)
+		}
+	}
+
+	// Get optional query or use default
+	query := getStringArg(request, "query")
+	if query == "" {
+		tableName := getMQTableName(source)
+		query = fmt.Sprintf("SELECT * FROM %s", tableName)
+	}
+
+	// Execute using dataql
+	result, err := executeDataQL(source, query, ",")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to peek messages: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(result), nil
+}
+
+// getMQTableName extracts a clean table name from an MQ URL
+func getMQTableName(source string) string {
+	// Remove the protocol prefix
+	name := source
+	for _, prefix := range []string{"sqs://", "kafka://", "rabbitmq://", "amqp://", "pulsar://", "pubsub://"} {
+		if strings.HasPrefix(strings.ToLower(name), prefix) {
+			name = name[len(prefix):]
+			break
+		}
+	}
+
+	// Handle full AWS URL format: https://sqs.region.amazonaws.com/account/queue
+	if strings.HasPrefix(name, "https://") {
+		parts := strings.Split(name, "/")
+		if len(parts) > 0 {
+			name = parts[len(parts)-1]
+		}
+	}
+
+	// Remove query parameters
+	if idx := strings.Index(name, "?"); idx != -1 {
+		name = name[:idx]
+	}
+
+	// Clean up for SQL table name
+	name = strings.ReplaceAll(name, "-", "_")
+	name = strings.ReplaceAll(name, ".", "_")
+	name = strings.ToLower(name)
+
+	// Remove non-alphanumeric characters
+	var result strings.Builder
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_' {
+			result.WriteRune(r)
+		}
+	}
+
+	finalName := result.String()
+	if finalName == "" {
+		finalName = "messages"
+	}
+
+	return finalName
 }
 
 // getStringArg extracts a string argument from the request without returning an error

@@ -20,7 +20,7 @@ dataql run [flags]
 | `--query` | `-q` | SQL query to execute | - | No |
 | `--delimiter` | `-d` | CSV field delimiter | `,` | No |
 | `--export` | `-e` | Export results to file path | - | No |
-| `--type` | `-t` | Export format (`csv`, `jsonl`) | - | No |
+| `--type` | `-t` | Export format (`csv`, `jsonl`, `json`, `xml`, `yaml`, `excel`, `parquet`) | - | No |
 | `--storage` | `-s` | SQLite file path for persistence | In-memory | No |
 | `--lines` | `-l` | Limit number of records to read | All | No |
 | `--collection` | `-c` | Custom table name | Filename | No |
@@ -133,8 +133,14 @@ dataql run -f data.csv
 |---------|-------------|
 | `.tables` | List all loaded tables |
 | `.schema [table]` | Show schema for a table |
+| `.count [table]` | Count rows in a table |
 | `.help` | Show available commands |
 | `.exit` or `.quit` | Exit the REPL |
+| `.clear` | Clear the screen |
+| `.version` | Show DataQL version |
+| `.paging [on\|off]` | Toggle paged output for large results |
+| `.pagesize [n]` | Set number of rows per page (default: 20) |
+| `.timing [on\|off]` | Toggle query execution timing |
 | `Ctrl+C` | Cancel current query |
 | `Ctrl+D` | Exit the REPL |
 
@@ -142,7 +148,9 @@ dataql run -f data.csv
 
 - **Command History**: Use arrow keys to navigate through previous commands
 - **Multi-line Queries**: Continue queries across multiple lines
-- **Tab Completion**: Auto-complete table names and keywords
+- **Tab Completion**: Auto-complete table names, column names, and SQL keywords
+- **Syntax Highlighting**: SQL keywords are highlighted for readability
+- **Paged Output**: Large results are paginated for easier navigation
 
 ## Usage Examples
 
@@ -180,6 +188,36 @@ dataql run -f input.json -q "SELECT * FROM input" -e output.csv -t csv
 
 ```bash
 dataql run -f input.csv -q "SELECT * FROM input" -e output.jsonl -t jsonl
+```
+
+### Export to JSON
+
+```bash
+dataql run -f input.csv -q "SELECT * FROM input" -e output.json -t json
+```
+
+### Export to Excel
+
+```bash
+dataql run -f input.csv -q "SELECT * FROM input" -e output.xlsx -t excel
+```
+
+### Export to Parquet
+
+```bash
+dataql run -f input.csv -q "SELECT * FROM input" -e output.parquet -t parquet
+```
+
+### Export to XML
+
+```bash
+dataql run -f input.csv -q "SELECT * FROM input" -e output.xml -t xml
+```
+
+### Export to YAML
+
+```bash
+dataql run -f input.csv -q "SELECT * FROM input" -e output.yaml -t yaml
 ```
 
 ### Multiple Input Files
@@ -321,14 +359,28 @@ SELECT CAST(id AS TEXT) FROM data;
 
 ## Environment Variables
 
+### Cloud Storage
+
 | Variable | Description |
 |----------|-------------|
-| `AWS_ACCESS_KEY_ID` | AWS access key for S3 |
-| `AWS_SECRET_ACCESS_KEY` | AWS secret key for S3 |
-| `AWS_REGION` | AWS region for S3 |
+| `AWS_ACCESS_KEY_ID` | AWS access key for S3/SQS |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key for S3/SQS |
+| `AWS_REGION` | AWS region for S3/SQS |
+| `AWS_ENDPOINT_URL` | Custom endpoint (for LocalStack, MinIO) |
+| `AWS_ENDPOINT_URL_S3` | S3-specific custom endpoint |
+| `AWS_ENDPOINT_URL_SQS` | SQS-specific custom endpoint |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to GCP service account JSON |
 | `AZURE_STORAGE_ACCOUNT` | Azure storage account name |
 | `AZURE_STORAGE_KEY` | Azure storage account key |
+
+### Message Queues
+
+| Variable | Description |
+|----------|-------------|
+| `KAFKA_BROKERS` | Kafka bootstrap servers (comma-separated) |
+| `KAFKA_SASL_USERNAME` | Kafka SASL username |
+| `KAFKA_SASL_PASSWORD` | Kafka SASL password |
+| `KAFKA_SASL_MECHANISM` | Kafka SASL mechanism (PLAIN, SCRAM-SHA-256, SCRAM-SHA-512) |
 
 ## Exit Codes
 

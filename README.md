@@ -87,7 +87,7 @@ dataql run -f sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY regi
 
 **Key Capabilities:**
 - Execute SQL queries using SQLite syntax
-- Export results to CSV or JSONL formats
+- Export results to CSV, JSONL, JSON, Excel, Parquet, XML, YAML formats
 - Interactive REPL mode with command history
 - Progress bar for large file operations
 - Parallel file processing for multiple inputs
@@ -247,7 +247,7 @@ dataql run -f data.jsonl
 | `--delimiter` | `-d` | CSV delimiter (only for CSV files) | `,` |
 | `--query` | `-q` | SQL query to execute | - |
 | `--export` | `-e` | Export path | - |
-| `--type` | `-t` | Export format (`csv`, `jsonl`) | - |
+| `--type` | `-t` | Export format (`csv`, `jsonl`, `json`, `excel`, `parquet`, `xml`, `yaml`) | - |
 | `--storage` | `-s` | SQLite file path (for persistence) | In-memory |
 | `--lines` | `-l` | Limit number of lines/records to read | All |
 | `--collection` | `-c` | Custom table name | Filename |

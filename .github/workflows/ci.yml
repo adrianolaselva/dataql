@@ -21,6 +21,21 @@ jobs:
       - name: Build
         run: go build -v ./...
 
+      - name: Build Binary
+        run: go build -o dataql ./main.go
+
+      - name: Verify Commands
+        run: |
+          echo "Verifying all CLI commands are registered..."
+          ./dataql --version
+          ./dataql run --help > /dev/null && echo "✓ run command OK"
+          ./dataql skills --help > /dev/null && echo "✓ skills command OK"
+          ./dataql mcp --help > /dev/null && echo "✓ mcp command OK"
+          ./dataql mcp serve --help > /dev/null && echo "✓ mcp serve command OK"
+          ./dataql skills install --help > /dev/null && echo "✓ skills install command OK"
+          ./dataql skills list --help > /dev/null && echo "✓ skills list command OK"
+          echo "All commands verified!"
+
   test:
     name: Test
     runs-on: ubuntu-latest

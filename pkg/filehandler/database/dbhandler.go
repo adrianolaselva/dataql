@@ -135,6 +135,10 @@ func (d *dbHandler) Import() error {
 			val := *(sv.(*interface{}))
 			if val == nil {
 				values[i] = ""
+			} else if bytes, ok := val.([]byte); ok {
+				// Convert []byte to string for proper handling of VARCHAR/TEXT columns
+				// This is needed as some database drivers return text as []byte
+				values[i] = string(bytes)
 			} else {
 				values[i] = fmt.Sprintf("%v", val)
 			}

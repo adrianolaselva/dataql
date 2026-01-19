@@ -65,6 +65,8 @@ services:
       MYSQL_USER: dataql
       MYSQL_PASSWORD: dataql_pass
       MYSQL_DATABASE: dataql_test
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     volumes:
       - mysql_data:/var/lib/mysql
       - ./scripts/init-mysql.sql:/docker-entrypoint-initdb.d/init.sql:ro

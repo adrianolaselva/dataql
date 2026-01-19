@@ -290,9 +290,6 @@ The simple format (`sqs://queue-name?region=X`) calls AWS `GetQueueUrl` which re
 - **SQS VisibilityTimeout=0**: Not fully supported. Messages are consumed despite setting VisibilityTimeout=0 in peek mode.
 - **SQS GetQueueUrl**: Returns internal Docker URLs. Use full URL format instead.
 
-### MySQL
-- **Binary Encoding**: MySQL driver may return byte arrays instead of strings for VARCHAR columns in some configurations. This is a known issue being investigated.
-
 ## CI/CD Integration
 
 The e2e tests are designed to be run in CI pipelines:

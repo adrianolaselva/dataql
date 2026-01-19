@@ -3,14 +3,18 @@
 
 USE dataql_test;
 
--- Create test_data table
+-- Set default charset for session
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+
+-- Create test_data table with explicit charset
 CREATE TABLE IF NOT EXISTS test_data (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(255),
     age INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Insert sample data
 INSERT INTO test_data (name, email, age) VALUES
@@ -20,18 +24,18 @@ INSERT INTO test_data (name, email, age) VALUES
     ('Diana', 'diana@example.com', 31),
     ('Eve', 'eve@example.com', 25);
 
--- Create users table
+-- Create users table with explicit charset
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
     department_id INT
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Create departments table
+-- Create departments table with explicit charset
 CREATE TABLE IF NOT EXISTS departments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Insert users
 INSERT INTO users (username, department_id) VALUES

@@ -41,8 +41,11 @@ func (m *MySQLConnector) Connect() error {
 
 // buildConnectionString builds the MySQL connection string (DSN)
 func (m *MySQLConnector) buildConnectionString() string {
-	// Format: user:password@tcp(host:port)/dbname
-	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
+	// Format: user:password@tcp(host:port)/dbname?charset=utf8mb4&collation=utf8mb4_unicode_ci&parseTime=true
+	// charset=utf8mb4: Ensures proper UTF-8 encoding (prevents binary []byte returns for VARCHAR)
+	// collation=utf8mb4_unicode_ci: Standard Unicode collation for utf8mb4
+	// parseTime=true: Parses DATE and DATETIME to time.Time instead of []byte
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&collation=utf8mb4_unicode_ci&parseTime=true",
 		m.config.User,
 		m.config.Password,
 		m.config.Host,

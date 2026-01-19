@@ -1,0 +1,347 @@
+# Data Sources
+
+DataQL supports multiple data sources including local files, URLs, cloud storage, and stdin.
+
+## Local Files
+
+Load data from local files by providing the file path:
+
+```bash
+# Absolute path
+dataql run -f /home/user/data/sales.csv -q "SELECT * FROM sales"
+
+# Relative path
+dataql run -f ./data/users.json -q "SELECT * FROM users"
+```
+
+### Supported Formats
+
+| Format | Extensions | Description |
+|--------|------------|-------------|
+| CSV | `.csv` | Comma-separated values |
+| JSON | `.json` | JSON arrays or single objects |
+| JSONL | `.jsonl`, `.ndjson` | Newline-delimited JSON |
+| XML | `.xml` | XML documents |
+| YAML | `.yaml`, `.yml` | YAML documents |
+| Parquet | `.parquet` | Apache Parquet columnar format |
+| Excel | `.xlsx`, `.xls` | Microsoft Excel spreadsheets |
+| Avro | `.avro` | Apache Avro format |
+| ORC | `.orc` | Apache ORC format |
+
+## HTTP/HTTPS URLs
+
+Query data directly from web URLs:
+
+```bash
+# CSV from URL
+dataql run -f "https://example.com/data.csv" -q "SELECT * FROM data"
+
+# JSON from API
+dataql run -f "https://api.example.com/users.json" -q "SELECT name, email FROM users"
+
+# GitHub raw files
+dataql run -f "https://raw.githubusercontent.com/user/repo/main/data.csv" -q "SELECT * FROM data"
+```
+
+### URL Examples
+
+```bash
+# Query public dataset
+dataql run \
+  -f "https://raw.githubusercontent.com/datasets/population/main/data/population.csv" \
+  -q "SELECT Country_Name, Value FROM population WHERE Year = 2020 ORDER BY Value DESC LIMIT 10"
+
+# Query JSON API
+dataql run \
+  -f "https://jsonplaceholder.typicode.com/posts" \
+  -q "SELECT id, title FROM posts WHERE userId = 1"
+```
+
+## Standard Input (stdin)
+
+Read data from stdin using `-` as the file path:
+
+```bash
+# Pipe CSV data
+cat data.csv | dataql run -f - -q "SELECT * FROM stdin"
+
+# Pipe JSON data
+echo '[{"name":"Alice","age":30},{"name":"Bob","age":25}]' | dataql run -f - -q "SELECT * FROM stdin"
+
+# Combine with curl
+curl -s "https://api.example.com/data.json" | dataql run -f - -q "SELECT * FROM stdin"
+
+# Process command output
+ps aux | dataql run -f - -d " " -q "SELECT * FROM stdin LIMIT 10"
+```
+
+### stdin with Different Formats
+
+The format is auto-detected from the content:
+
+```bash
+# JSON from stdin
+echo '{"users":[{"name":"Alice"},{"name":"Bob"}]}' | dataql run -f - -q "SELECT * FROM stdin"
+
+# CSV from stdin
+echo -e "id,name\n1,Alice\n2,Bob" | dataql run -f - -q "SELECT * FROM stdin"
+```
+
+## Amazon S3
+
+Query data stored in Amazon S3 buckets.
+
+### Configuration
+
+Set AWS credentials via environment variables:
+
+```bash
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_REGION="us-east-1"
+```
+
+Or use AWS CLI configuration:
+
+```bash
+aws configure
+```
+
+### Usage
+
+```bash
+# S3 URL format
+dataql run -f "s3://bucket-name/path/to/file.csv" -q "SELECT * FROM file"
+
+# Query S3 object
+dataql run -f "s3://my-data-bucket/sales/2024/january.csv" -q "
+SELECT product, SUM(amount) as total
+FROM january
+GROUP BY product
+ORDER BY total DESC
+"
+
+# S3 with different formats
+dataql run -f "s3://my-bucket/data.json" -q "SELECT * FROM data"
+dataql run -f "s3://my-bucket/data.parquet" -q "SELECT * FROM data"
+```
+
+### S3 Configuration Options
+
+You can configure S3 access with additional options:
+
+| Environment Variable | Description |
+|---------------------|-------------|
+| `AWS_ACCESS_KEY_ID` | AWS access key ID |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret access key |
+| `AWS_SESSION_TOKEN` | Session token (for temporary credentials) |
+| `AWS_REGION` | AWS region (e.g., `us-east-1`) |
+| `AWS_ENDPOINT_URL` | Custom endpoint (for S3-compatible storage) |
+
+### S3-Compatible Storage
+
+DataQL works with S3-compatible storage services like MinIO, DigitalOcean Spaces, etc.:
+
+```bash
+# MinIO
+export AWS_ENDPOINT_URL="http://localhost:9000"
+dataql run -f "s3://my-bucket/data.csv" -q "SELECT * FROM data"
+
+# DigitalOcean Spaces
+export AWS_ENDPOINT_URL="https://nyc3.digitaloceanspaces.com"
+dataql run -f "s3://my-space/data.csv" -q "SELECT * FROM data"
+```
+
+## Google Cloud Storage (GCS)
+
+Query data stored in Google Cloud Storage buckets.
+
+### Configuration
+
+Set up authentication using a service account:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
+```
+
+Or use Application Default Credentials:
+
+```bash
+gcloud auth application-default login
+```
+
+### Usage
+
+```bash
+# GCS URL format
+dataql run -f "gs://bucket-name/path/to/file.csv" -q "SELECT * FROM file"
+
+# Query GCS object
+dataql run -f "gs://my-data-bucket/analytics/events.jsonl" -q "
+SELECT event_type, COUNT(*) as count
+FROM events
+GROUP BY event_type
+"
+
+# GCS with different formats
+dataql run -f "gs://my-bucket/data.parquet" -q "SELECT * FROM data"
+```
+
+### GCS Configuration
+
+| Environment Variable | Description |
+|---------------------|-------------|
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account JSON file |
+| `GOOGLE_CLOUD_PROJECT` | GCP project ID (optional) |
+
+### Service Account Setup
+
+1. Create a service account in GCP Console
+2. Download the JSON key file
+3. Set the environment variable:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
+```
+
+## Azure Blob Storage
+
+Query data stored in Azure Blob Storage containers.
+
+### Configuration
+
+Set Azure credentials via environment variables:
+
+```bash
+export AZURE_STORAGE_ACCOUNT="your-storage-account"
+export AZURE_STORAGE_KEY="your-storage-key"
+```
+
+Or use Azure CLI:
+
+```bash
+az login
+```
+
+### Usage
+
+```bash
+# Azure Blob URL format
+dataql run -f "az://container-name/path/to/file.csv" -q "SELECT * FROM file"
+
+# Alternative format
+dataql run -f "azure://container-name/path/to/file.csv" -q "SELECT * FROM file"
+
+# Query Azure blob
+dataql run -f "az://mycontainer/data/users.json" -q "
+SELECT name, email
+FROM users
+WHERE active = true
+"
+```
+
+### Azure Configuration
+
+| Environment Variable | Description |
+|---------------------|-------------|
+| `AZURE_STORAGE_ACCOUNT` | Storage account name |
+| `AZURE_STORAGE_KEY` | Storage account access key |
+| `AZURE_STORAGE_CONNECTION_STRING` | Connection string (alternative) |
+| `AZURE_STORAGE_SAS_TOKEN` | SAS token for limited access |
+
+### Using Connection String
+
+```bash
+export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=mykey;EndpointSuffix=core.windows.net"
+dataql run -f "az://mycontainer/data.csv" -q "SELECT * FROM data"
+```
+
+### Using SAS Token
+
+```bash
+export AZURE_STORAGE_ACCOUNT="myaccount"
+export AZURE_STORAGE_SAS_TOKEN="?sv=2021-06-08&ss=b&srt=co&sp=rl..."
+dataql run -f "az://mycontainer/data.csv" -q "SELECT * FROM data"
+```
+
+## Multiple Sources
+
+You can query data from multiple sources and join them:
+
+```bash
+# Join local file with S3 data
+dataql run \
+  -f users.csv \
+  -f "s3://my-bucket/orders.csv" \
+  -q "SELECT u.name, o.amount FROM users u JOIN orders o ON u.id = o.user_id"
+
+# Join data from different cloud providers
+dataql run \
+  -f "s3://aws-bucket/products.csv" \
+  -f "gs://gcp-bucket/inventory.csv" \
+  -q "SELECT p.name, i.quantity FROM products p JOIN inventory i ON p.sku = i.sku"
+```
+
+## Best Practices
+
+### Performance
+
+1. **Use Parquet for large datasets**: Parquet is columnar and compressed, making it faster for analytical queries.
+
+```bash
+dataql run -f "s3://bucket/large-data.parquet" -q "SELECT column1, column2 FROM large_data"
+```
+
+2. **Limit records for exploration**:
+
+```bash
+dataql run -f "s3://bucket/huge-file.csv" -l 1000 -q "SELECT * FROM huge_file"
+```
+
+3. **Use JSONL for streaming**: JSONL allows processing line by line with lower memory usage.
+
+### Security
+
+1. **Use IAM roles in AWS**: Instead of access keys, use IAM roles when running on EC2/ECS.
+
+2. **Use workload identity in GCP**: Configure workload identity for GKE workloads.
+
+3. **Use managed identities in Azure**: Use managed identities for Azure VMs and AKS.
+
+4. **Never commit credentials**: Use environment variables or secret managers.
+
+### Troubleshooting
+
+**S3 Access Denied:**
+```bash
+# Check credentials
+aws sts get-caller-identity
+
+# Check bucket permissions
+aws s3 ls s3://bucket-name/
+```
+
+**GCS Permission Denied:**
+```bash
+# Check authentication
+gcloud auth list
+
+# Check bucket access
+gsutil ls gs://bucket-name/
+```
+
+**Azure Storage Error:**
+```bash
+# Check account
+az storage account show --name myaccount
+
+# List containers
+az storage container list --account-name myaccount
+```
+
+## See Also
+
+- [Getting Started](getting-started.md)
+- [CLI Reference](cli-reference.md)
+- [Database Connections](databases.md)
+- [Examples](examples.md)

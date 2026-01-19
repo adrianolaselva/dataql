@@ -15,24 +15,39 @@ It loads data into an SQLite database (in-memory or file-based) enabling powerfu
 
 ## Features
 
-**Current:**
+**Supported File Formats:**
+- CSV (with configurable delimiter)
+- JSON (arrays or single objects)
+- JSONL/NDJSON (newline-delimited JSON)
+- XML
+- YAML
+- Parquet
+- Excel (.xlsx, .xls)
+- Avro
+- ORC
 
-- **Multi-format support**: CSV, JSON, JSONL/NDJSON with auto-detection
+**Data Sources:**
+- Local files
+- HTTP/HTTPS URLs
+- Amazon S3
+- Google Cloud Storage
+- Azure Blob Storage
+- Standard input (stdin)
+
+**Database Connectors:**
+- PostgreSQL
+- MySQL
+- DuckDB
+- MongoDB
+
+**Key Capabilities:**
 - Execute SQL queries using SQLite syntax
-- Export results to `.csv` or `.jsonl` formats
+- Export results to CSV or JSONL formats
 - Interactive REPL mode with command history
 - Progress bar for large file operations
 - Parallel file processing for multiple inputs
 - Automatic flattening of nested JSON objects
-
-**Roadmap:**
-
-- Additional formats: XML, Parquet, Excel
-- Database connectors: PostgreSQL, MySQL, MongoDB
-- Cloud storage: S3, GCS, Azure Blob
-- HTTP/HTTPS URLs as data sources
-- REPL with autocomplete and syntax highlighting
-- Interactive datasource configuration
+- Join data from multiple sources
 
 ## Installation
 
@@ -130,12 +145,33 @@ dataql run -f data.jsonl
 | CSV | `.csv` | Comma-separated values with configurable delimiter |
 | JSON | `.json` | JSON arrays or single objects |
 | JSONL | `.jsonl`, `.ndjson` | Newline-delimited JSON (streaming) |
+| XML | `.xml` | XML documents |
+| YAML | `.yaml`, `.yml` | YAML documents |
+| Parquet | `.parquet` | Apache Parquet columnar format |
+| Excel | `.xlsx`, `.xls` | Microsoft Excel spreadsheets |
+| Avro | `.avro` | Apache Avro format |
+| ORC | `.orc` | Apache ORC format |
+
+### Supported Data Sources
+
+| Source | Format | Example |
+|--------|--------|---------|
+| Local file | Path | `-f data.csv` |
+| HTTP/HTTPS | URL | `-f "https://example.com/data.csv"` |
+| Amazon S3 | `s3://` | `-f "s3://bucket/path/data.csv"` |
+| Google Cloud Storage | `gs://` | `-f "gs://bucket/path/data.json"` |
+| Azure Blob | `az://` | `-f "az://container/path/data.parquet"` |
+| Standard input | `-` | `cat data.csv \| dataql run -f -` |
+| PostgreSQL | `postgres://` | `-f "postgres://user:pass@host/db?table=t"` |
+| MySQL | `mysql://` | `-f "mysql://user:pass@host/db?table=t"` |
+| DuckDB | `duckdb://` | `-f "duckdb:///path/db.db?table=t"` |
+| MongoDB | `mongodb://` | `-f "mongodb://host/db?collection=c"` |
 
 ### Command Line Options
 
 | Flag | Short | Description | Default |
 |------|-------|-------------|---------|
-| `--file` | `-f` | Input file(s) (CSV, JSON, JSONL) | Required |
+| `--file` | `-f` | Input file, URL, or database connection | Required |
 | `--delimiter` | `-d` | CSV delimiter (only for CSV files) | `,` |
 | `--query` | `-q` | SQL query to execute | - |
 | `--export` | `-e` | Export path | - |
@@ -224,6 +260,33 @@ dataql run -f data.json -c my_table -q "SELECT * FROM my_table"
 dataql run -f data.csv -d "," -s ./database.db
 ```
 
+**Query from URL:**
+
+```bash
+dataql run -f "https://raw.githubusercontent.com/datasets/population/main/data/population.csv" \
+  -q "SELECT Country_Name, Value FROM population WHERE Year = 2020 LIMIT 10"
+```
+
+**Query from S3:**
+
+```bash
+dataql run -f "s3://my-bucket/data/sales.csv" \
+  -q "SELECT product, SUM(amount) as total FROM sales GROUP BY product"
+```
+
+**Query from PostgreSQL:**
+
+```bash
+dataql run -f "postgres://user:pass@localhost:5432/mydb?table=orders" \
+  -q "SELECT * FROM orders WHERE status = 'completed'"
+```
+
+**Read from stdin:**
+
+```bash
+cat data.csv | dataql run -f - -q "SELECT * FROM stdin WHERE value > 100"
+```
+
 ### Real-World Example
 
 ```bash
@@ -259,12 +322,22 @@ SELECT * FROM data ORDER BY created_at DESC LIMIT 100;
 
 > **Note:** Table names are derived from filenames (without extension). For `sales.csv`, `sales.json`, or `sales.jsonl`, use `SELECT * FROM sales`. Use `--collection` flag to specify a custom table name.
 
+## Documentation
+
+For detailed documentation, see:
+
+- [Getting Started](docs/getting-started.md) - Installation and Hello World examples
+- [CLI Reference](docs/cli-reference.md) - Complete command-line reference
+- [Data Sources](docs/data-sources.md) - Working with S3, GCS, Azure, URLs, and stdin
+- [Database Connections](docs/databases.md) - Connect to PostgreSQL, MySQL, DuckDB, MongoDB
+- [Examples](docs/examples.md) - Real-world usage examples and automation scripts
+
 ## Development
 
 ### Prerequisites
 
-- Go 1.22 or higher
-- GCC (for SQLite compilation)
+- Go 1.24 or higher
+- GCC (for CGO compilation - required for SQLite, DuckDB)
 
 ### Building
 

@@ -68,6 +68,7 @@ Once configured, the following tools become available to your LLM:
 | `dataql_schema` | Get structure/schema of a data source |
 | `dataql_preview` | Preview first N rows |
 | `dataql_aggregate` | Perform count, sum, avg, min, max operations |
+| `dataql_mq_peek` | Peek at message queue messages without consuming |
 
 ## Testing Your Setup
 
@@ -210,6 +211,54 @@ Perform aggregation operations on a column.
 }
 ```
 
+### dataql_mq_peek
+
+Peek at message queue messages without consuming/deleting them. Supports AWS SQS and Apache Kafka.
+
+**Parameters:**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| source | Yes | Message queue URL (SQS or Kafka) |
+| max_messages | No | Maximum messages to retrieve (default: 10) |
+| query | No | SQL query to filter/transform messages |
+
+**Example Request (SQS):**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "dataql_mq_peek",
+    "arguments": {
+      "source": "sqs://my-queue?region=us-east-1",
+      "max_messages": 20,
+      "query": "SELECT body_event_type, COUNT(*) as count FROM my_queue GROUP BY body_event_type"
+    }
+  },
+  "id": 1
+}
+```
+
+**Example Request (Kafka):**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "dataql_mq_peek",
+    "arguments": {
+      "source": "kafka://localhost:9092/events",
+      "max_messages": 50,
+      "query": "SELECT body_level, body_message FROM events WHERE body_level = 'ERROR'"
+    }
+  },
+  "id": 1
+}
+```
+
+**Note:** Messages are read in peek mode - they are NOT consumed or deleted, making this safe for troubleshooting.
+
 ## Advanced Configuration
 
 ### Debug Mode
@@ -258,6 +307,10 @@ The MCP server supports all DataQL data sources:
 - PostgreSQL (`postgres://user:pass@host/db?table=name`)
 - MySQL (`mysql://user:pass@host/db?table=name`)
 - MongoDB (`mongodb://user:pass@host/db?collection=name`)
+
+### Message Queues (Peek Mode)
+- AWS SQS (`sqs://queue-name?region=us-east-1`)
+- Apache Kafka (`kafka://broker:9092/topic`)
 
 ## Security Considerations
 

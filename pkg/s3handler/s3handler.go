@@ -9,7 +9,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -130,16 +132,55 @@ func (h *S3Handler) downloadS3File(s3URL string) (string, error) {
 }
 
 // initClient initializes the S3 client using default AWS credentials
+// Supports LocalStack via AWS_ENDPOINT_URL or AWS_ENDPOINT_URL_S3 environment variables
 func (h *S3Handler) initClient() error {
 	ctx := context.Background()
 
+	// Check for custom endpoint (LocalStack support)
+	endpointURL := os.Getenv("AWS_ENDPOINT_URL_S3")
+	if endpointURL == "" {
+		endpointURL = os.Getenv("AWS_ENDPOINT_URL")
+	}
+
 	// Load AWS configuration from environment, shared config, etc.
-	cfg, err := config.LoadDefaultConfig(ctx)
+	var opts []func(*config.LoadOptions) error
+
+	// Check for explicit credentials (useful for LocalStack)
+	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	if accessKey != "" && secretKey != "" {
+		opts = append(opts, config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
+		))
+	}
+
+	// Set region if specified
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = os.Getenv("AWS_DEFAULT_REGION")
+	}
+	if region != "" {
+		opts = append(opts, config.WithRegion(region))
+	}
+
+	cfg, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
-	h.client = s3.NewFromConfig(cfg)
+	// Create S3 client with optional custom endpoint
+	var s3Opts []func(*s3.Options)
+
+	if endpointURL != "" {
+		// Use custom endpoint (LocalStack)
+		s3Opts = append(s3Opts, func(o *s3.Options) {
+			o.BaseEndpoint = aws.String(endpointURL)
+			// Use path-style addressing for LocalStack compatibility
+			o.UsePathStyle = true
+		})
+	}
+
+	h.client = s3.NewFromConfig(cfg, s3Opts...)
 	return nil
 }
 

@@ -87,7 +87,7 @@ dataql run -f sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY regi
 
 **Key Capabilities:**
 - Execute SQL queries using SQLite syntax
-- Export results to CSV or JSONL formats
+- Export results to CSV, JSONL, JSON, Excel, Parquet, XML, YAML formats
 - Interactive REPL mode with command history
 - Progress bar for large file operations
 - Parallel file processing for multiple inputs
@@ -247,7 +247,7 @@ dataql run -f data.jsonl
 | `--delimiter` | `-d` | CSV delimiter (only for CSV files) | `,` |
 | `--query` | `-q` | SQL query to execute | - |
 | `--export` | `-e` | Export path | - |
-| `--type` | `-t` | Export format (`csv`, `jsonl`) | - |
+| `--type` | `-t` | Export format (`csv`, `jsonl`, `json`, `excel`, `parquet`, `xml`, `yaml`) | - |
 | `--storage` | `-s` | SQLite file path (for persistence) | In-memory |
 | `--lines` | `-l` | Limit number of lines/records to read | All |
 | `--collection` | `-c` | Custom table name | Filename |
@@ -419,6 +419,7 @@ For detailed documentation, see:
 
 - Go 1.24 or higher
 - GCC (for CGO compilation - required for SQLite, DuckDB)
+- Docker and Docker Compose (for E2E tests)
 
 ### Building
 
@@ -429,8 +430,30 @@ make build
 ### Testing
 
 ```bash
+# Unit tests
 make test
+
+# E2E tests (requires Docker)
+make e2e-up           # Start infrastructure (PostgreSQL, MySQL, MongoDB, Kafka, LocalStack)
+make e2e-wait         # Wait for services to be healthy
+make e2e-test-scripts # Run all E2E tests
+make e2e-down         # Stop infrastructure
 ```
+
+### E2E Test Coverage
+
+DataQL includes comprehensive E2E tests for all data sources:
+
+| Data Source | Tests | Status |
+|-------------|-------|--------|
+| PostgreSQL | 26 | SELECT, WHERE, ORDER BY, LIMIT, aggregates, exports |
+| MySQL | 26 | SELECT, WHERE, ORDER BY, LIMIT, aggregates, exports |
+| MongoDB | 20+ | Collections, queries, filters, exports |
+| Kafka | 10+ | Peek mode, message parsing, exports |
+| S3 (LocalStack) | 13 | CSV, JSON, JSONL file reading, queries, exports |
+| SQS (LocalStack) | 16 | Message reading, filtering, aggregation, exports |
+
+See [e2e/README.md](e2e/README.md) for detailed E2E testing documentation.
 
 ### Linting
 

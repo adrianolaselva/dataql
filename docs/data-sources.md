@@ -272,8 +272,8 @@ Query messages from message queues without consuming/deleting them. Perfect for 
 
 | System | URL Prefix | Status |
 |--------|-----------|--------|
-| AWS SQS | `sqs://` | Supported |
-| Apache Kafka | `kafka://` | Coming soon |
+| AWS SQS | `sqs://` | ✅ Supported |
+| Apache Kafka | `kafka://` | ✅ Supported |
 | RabbitMQ | `rabbitmq://` | Coming soon |
 | Apache Pulsar | `pulsar://` | Coming soon |
 | Google Pub/Sub | `pubsub://` | Coming soon |
@@ -367,6 +367,98 @@ body_user_name = "Alice"
 3. **Messages are NOT deleted** - safe for troubleshooting
 4. **Filter with SQL** instead of retrieving all messages
 
+### Apache Kafka
+
+Query Kafka topic messages without committing offsets (peek mode).
+
+#### Configuration
+
+Set Kafka connection via environment variables:
+
+```bash
+export KAFKA_BROKERS="localhost:9092"
+
+# For authenticated clusters
+export KAFKA_SASL_USERNAME="your-username"
+export KAFKA_SASL_PASSWORD="your-password"
+export KAFKA_SASL_MECHANISM="PLAIN"  # or SCRAM-SHA-256, SCRAM-SHA-512
+```
+
+#### URL Formats
+
+```bash
+# Simple format: broker/topic
+kafka://localhost:9092/my-topic
+
+# With consumer group
+kafka://localhost:9092/my-topic?group=my-consumer-group
+
+# With options
+kafka://localhost:9092/my-topic?group=dataql-reader&max_messages=100
+```
+
+#### URL Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `group` | Consumer group ID | `dataql-reader` |
+| `max_messages` | Maximum messages to retrieve | 100 |
+| `offset` | Start offset (`newest`, `oldest`) | `newest` |
+
+#### Usage Examples
+
+```bash
+# Preview messages from a topic
+dataql run -f "kafka://localhost:9092/events" \
+  -q "SELECT * FROM events LIMIT 10"
+
+# Analyze message types
+dataql run -f "kafka://localhost:9092/orders?max_messages=1000" \
+  -q "SELECT body_order_type, COUNT(*) as count FROM orders GROUP BY body_order_type"
+
+# Filter error events
+dataql run -f "kafka://localhost:9092/logs" \
+  -q "SELECT body_level, body_message FROM logs WHERE body_level = 'ERROR'"
+
+# Export messages to file
+dataql run -f "kafka://localhost:9092/events" \
+  -q "SELECT * FROM events" \
+  -e events_backup.jsonl -t jsonl
+```
+
+#### Generated Table Schema
+
+Messages are imported into a table with these columns:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `key` | TEXT | Kafka message key |
+| `partition` | TEXT | Partition number |
+| `offset` | TEXT | Message offset |
+| `timestamp` | TEXT | Message timestamp |
+| `body` | TEXT | Raw message body |
+| `body_*` | TEXT | Flattened JSON fields (if body is JSON) |
+
+For JSON message bodies, fields are automatically flattened with `body_` prefix:
+
+```json
+// Message body
+{"event": "user_signup", "user": {"id": 123, "email": "alice@example.com"}}
+
+// Becomes columns
+body_event = "user_signup"
+body_user_id = "123"
+body_user_email = "alice@example.com"
+```
+
+#### Peek Mode (Non-Destructive)
+
+Kafka reads in DataQL use **peek mode**:
+- Messages are read but offsets are NOT committed
+- Multiple reads return the same messages
+- Safe for troubleshooting and debugging
+- Does not affect other consumers
+
 ### MCP Tool
 
 When using with LLMs via MCP, the `dataql_mq_peek` tool is available:
@@ -378,6 +470,19 @@ When using with LLMs via MCP, the `dataql_mq_peek` tool is available:
     "source": "sqs://my-queue?region=us-east-1",
     "max_messages": 20,
     "query": "SELECT * FROM my_queue WHERE body_status = 'error'"
+  }
+}
+```
+
+Also works with Kafka:
+
+```json
+{
+  "name": "dataql_mq_peek",
+  "arguments": {
+    "source": "kafka://localhost:9092/events",
+    "max_messages": 50,
+    "query": "SELECT body_event_type, COUNT(*) as count FROM events GROUP BY body_event_type"
   }
 }
 ```

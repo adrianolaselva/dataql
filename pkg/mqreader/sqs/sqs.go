@@ -5,6 +5,7 @@ package sqs
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/adrianolaselva/dataql/pkg/mqreader"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 )
@@ -29,6 +31,7 @@ type SQSReader struct {
 	queueURL        string
 	queueName       string
 	region          string
+	endpoint        string
 	maxMessages     int
 	waitTimeSeconds int32
 	connected       bool
@@ -58,10 +61,17 @@ func NewSQSReader(cfg *mqreader.Config) (*SQSReader, error) {
 		waitTime = 20 // SQS maximum
 	}
 
+	// Extract endpoint from options if provided
+	endpoint := ""
+	if cfg.Options != nil {
+		endpoint = cfg.Options["endpoint"]
+	}
+
 	return &SQSReader{
 		queueURL:        cfg.URL,
 		queueName:       cfg.QueueName,
 		region:          cfg.Region,
+		endpoint:        endpoint,
 		maxMessages:     maxMsgs,
 		waitTimeSeconds: int32(waitTime),
 	}, nil
@@ -78,8 +88,26 @@ func (r *SQSReader) Connect(ctx context.Context) error {
 
 	// Load AWS configuration
 	var opts []func(*config.LoadOptions) error
-	if r.region != "" {
-		opts = append(opts, config.WithRegion(r.region))
+
+	// Set region
+	region := r.region
+	if region == "" {
+		region = os.Getenv("AWS_REGION")
+		if region == "" {
+			region = os.Getenv("AWS_DEFAULT_REGION")
+		}
+	}
+	if region != "" {
+		opts = append(opts, config.WithRegion(region))
+	}
+
+	// Check for explicit credentials (useful for LocalStack)
+	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	if accessKey != "" && secretKey != "" {
+		opts = append(opts, config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
+		))
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx, opts...)
@@ -87,7 +115,25 @@ func (r *SQSReader) Connect(ctx context.Context) error {
 		return fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
-	r.client = sqs.NewFromConfig(cfg)
+	// Check for custom endpoint (LocalStack support)
+	endpointURL := r.endpoint
+	if endpointURL == "" {
+		endpointURL = os.Getenv("AWS_ENDPOINT_URL_SQS")
+	}
+	if endpointURL == "" {
+		endpointURL = os.Getenv("AWS_ENDPOINT_URL")
+	}
+
+	// Create SQS client with optional custom endpoint
+	var sqsOpts []func(*sqs.Options)
+
+	if endpointURL != "" {
+		sqsOpts = append(sqsOpts, func(o *sqs.Options) {
+			o.BaseEndpoint = aws.String(endpointURL)
+		})
+	}
+
+	r.client = sqs.NewFromConfig(cfg, sqsOpts...)
 
 	// If we have a queue name but no URL, resolve it
 	if r.queueURL == "" && r.queueName != "" {

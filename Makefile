@@ -12,7 +12,9 @@ endif
         build-linux build-linux-arm64 build-darwin build-darwin-arm64 build-windows \
         build-all install install-local uninstall release-dry-run docker-build \
         verify verify-binary \
-        e2e-up e2e-down e2e-logs e2e-status e2e-clean e2e-test e2e-wait e2e-reset
+        e2e-up e2e-down e2e-logs e2e-status e2e-clean e2e-test e2e-wait e2e-reset \
+        e2e-test-scripts e2e-test-postgres e2e-test-mysql e2e-test-mongodb \
+        e2e-test-kafka e2e-test-s3 e2e-test-sqs
 
 all:
 	git rev-parse HEAD
@@ -216,6 +218,44 @@ e2e-test: build
 # Reset e2e environment (clean + up)
 e2e-reset: e2e-clean e2e-up
 	@echo "E2E environment has been reset!"
+
+# Run shell-based e2e tests (comprehensive integration tests)
+e2e-test-scripts: build
+	@echo "Running shell-based E2E tests..."
+	@chmod +x $(E2E_DIR)/tests/*.sh
+	@set -a && source $(E2E_ENV_FILE) && set +a && \
+		DATAQL_BIN=$(PWD)/$(PROJECT_NAME) $(E2E_DIR)/tests/test-all.sh
+
+# Individual test suites
+e2e-test-postgres: build
+	@chmod +x $(E2E_DIR)/tests/test-postgres.sh
+	@set -a && source $(E2E_ENV_FILE) && set +a && \
+		DATAQL_BIN=$(PWD)/$(PROJECT_NAME) $(E2E_DIR)/tests/test-postgres.sh
+
+e2e-test-mysql: build
+	@chmod +x $(E2E_DIR)/tests/test-mysql.sh
+	@set -a && source $(E2E_ENV_FILE) && set +a && \
+		DATAQL_BIN=$(PWD)/$(PROJECT_NAME) $(E2E_DIR)/tests/test-mysql.sh
+
+e2e-test-mongodb: build
+	@chmod +x $(E2E_DIR)/tests/test-mongodb.sh
+	@set -a && source $(E2E_ENV_FILE) && set +a && \
+		DATAQL_BIN=$(PWD)/$(PROJECT_NAME) $(E2E_DIR)/tests/test-mongodb.sh
+
+e2e-test-kafka: build
+	@chmod +x $(E2E_DIR)/tests/test-kafka.sh
+	@set -a && source $(E2E_ENV_FILE) && set +a && \
+		DATAQL_BIN=$(PWD)/$(PROJECT_NAME) $(E2E_DIR)/tests/test-kafka.sh
+
+e2e-test-s3: build
+	@chmod +x $(E2E_DIR)/tests/test-s3.sh
+	@set -a && source $(E2E_ENV_FILE) && set +a && \
+		DATAQL_BIN=$(PWD)/$(PROJECT_NAME) $(E2E_DIR)/tests/test-s3.sh
+
+e2e-test-sqs: build
+	@chmod +x $(E2E_DIR)/tests/test-sqs.sh
+	@set -a && source $(E2E_ENV_FILE) && set +a && \
+		DATAQL_BIN=$(PWD)/$(PROJECT_NAME) $(E2E_DIR)/tests/test-sqs.sh
 
 # Shell access to containers
 e2e-shell-postgres:

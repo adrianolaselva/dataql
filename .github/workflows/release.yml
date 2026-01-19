@@ -13,13 +13,12 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     container:
-      # Use Debian Buster (GLIBC 2.28) for maximum compatibility
-      image: golang:1.24-buster
+      # Use Alpine for musl-based static binaries (no GLIBC dependency)
+      image: golang:1.24-alpine
     steps:
       - name: Install build dependencies
         run: |
-          apt-get update
-          apt-get install -y git gcc g++ make
+          apk add --no-cache git gcc musl-dev g++ make
 
       - name: Checkout
         uses: actions/checkout@v4

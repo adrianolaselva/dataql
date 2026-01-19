@@ -15,15 +15,12 @@ builds:
     binary: dataql
     env:
       - CGO_ENABLED=1
-      - CC=musl-gcc
     goos:
       - linux
     goarch:
       - amd64
     ldflags:
       - -s -w
-      - -linkmode external
-      - -extldflags "-static"
       - -X github.com/adrianolaselva/dataql/cmd.Version={{.Version}}
       - -X github.com/adrianolaselva/dataql/cmd.Commit={{.ShortCommit}}
       - -X github.com/adrianolaselva/dataql/cmd.Date={{.Date}}

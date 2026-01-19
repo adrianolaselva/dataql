@@ -11,7 +11,8 @@ permissions:
 jobs:
   release:
     name: Release
-    runs-on: ubuntu-latest
+    # Use Ubuntu 20.04 for older GLIBC (2.31) compatibility
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,11 +23,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.24'
-
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y musl-tools musl-dev
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6

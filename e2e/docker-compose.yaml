@@ -1,0 +1,254 @@
+# DataQL E2E Testing Infrastructure
+# Usage: cd e2e && docker-compose up -d
+# Or: make e2e-up (from project root)
+
+networks:
+  dataql-e2e:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+
+volumes:
+  postgres_data:
+  mysql_data:
+  mongodb_data:
+  kafka_data:
+  zookeeper_data:
+  localstack_data:
+  redis_data:
+
+services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: dataql-postgres
+    hostname: postgres
+    networks:
+      dataql-e2e:
+        ipv4_address: 172.28.0.10
+    ports:
+      - "25432:5432"
+    environment:
+      POSTGRES_USER: dataql
+      POSTGRES_PASSWORD: dataql_pass
+      POSTGRES_DB: dataql_test
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataql -d dataql_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # ============================================
+  # MySQL Database
+  # ============================================
+  mysql:
+    image: mysql:8.0
+    container_name: dataql-mysql
+    hostname: mysql
+    networks:
+      dataql-e2e:
+        ipv4_address: 172.28.0.11
+    ports:
+      - "23306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_USER: dataql
+      MYSQL_PASSWORD: dataql_pass
+      MYSQL_DATABASE: dataql_test
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/init-mysql.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "dataql", "-pdataql_pass"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ============================================
+  # MongoDB Database
+  # ============================================
+  mongodb:
+    image: mongo:7.0
+    container_name: dataql-mongodb
+    hostname: mongodb
+    networks:
+      dataql-e2e:
+        ipv4_address: 172.28.0.12
+    ports:
+      - "27117:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: dataql
+      MONGO_INITDB_ROOT_PASSWORD: dataql_pass
+      MONGO_INITDB_DATABASE: dataql_test
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/init-mongodb.js:/docker-entrypoint-initdb.d/init.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  # ============================================
+  # Zookeeper (for Kafka)
+  # ============================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.3
+    container_name: dataql-zookeeper
+    hostname: zookeeper
+    networks:
+      dataql-e2e:
+        ipv4_address: 172.28.0.20
+    ports:
+      - "22181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # ============================================
+  # Apache Kafka
+  # ============================================
+  kafka:
+    image: confluentinc/cp-kafka:7.5.3
+    container_name: dataql-kafka
+    hostname: kafka
+    networks:
+      dataql-e2e:
+        ipv4_address: 172.28.0.21
+    ports:
+      - "29092:29092"
+      - "19092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ============================================
+  # Kafka Topic Initializer
+  # ============================================
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.3
+    container_name: dataql-kafka-init
+    networks:
+      dataql-e2e:
+        ipv4_address: 172.28.0.22
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      echo 'Creating Kafka topics...'
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1 --topic dataql-test-topic
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 --topic dataql-json-topic
+
+      echo 'Producing sample messages...'
+      echo '{\"id\":1,\"name\":\"Alice\",\"email\":\"alice@example.com\"}' | kafka-console-producer --bootstrap-server kafka:9092 --topic dataql-test-topic
+      echo '{\"id\":2,\"name\":\"Bob\",\"email\":\"bob@example.com\"}' | kafka-console-producer --bootstrap-server kafka:9092 --topic dataql-test-topic
+      echo '{\"id\":3,\"name\":\"Charlie\",\"email\":\"charlie@example.com\"}' | kafka-console-producer --bootstrap-server kafka:9092 --topic dataql-test-topic
+
+      echo 'Kafka initialization complete!'
+      "
+    restart: "no"
+
+  # ============================================
+  # LocalStack (AWS Services: S3, SQS, DynamoDB)
+  # ============================================
+  localstack:
+    image: localstack/localstack:3.2
+    container_name: dataql-localstack
+    hostname: localstack
+    networks:
+      dataql-e2e:
+        ipv4_address: 172.28.0.30
+    ports:
+      - "24566:4566"
+      - "24510-24559:4510-4559"
+    environment:
+      SERVICES: s3,sqs,dynamodb
+      DEBUG: 0
+      DATA_DIR: /var/lib/localstack/data
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      LOCALSTACK_HOST: localstack
+      EDGE_PORT: 4566
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./scripts/init-localstack.sh:/etc/localstack/init/ready.d/init-localstack.sh:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  # ============================================
+  # Redis (Optional - for caching/future use)
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: dataql-redis
+    hostname: redis
+    networks:
+      dataql-e2e:
+        ipv4_address: 172.28.0.40
+    ports:
+      - "26379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+    command: redis-server --appendonly yes

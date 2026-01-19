@@ -101,8 +101,8 @@ func (r *KafkaReader) Connect(ctx context.Context) error {
 		Brokers:        r.brokers,
 		Topic:          r.topic,
 		GroupID:        peekGroupID,
-		MinBytes:       1,            // Fetch immediately
-		MaxBytes:       10e6,         // 10MB max
+		MinBytes:       1,    // Fetch immediately
+		MaxBytes:       10e6, // 10MB max
 		MaxWait:        r.waitTimeout,
 		StartOffset:    kafka.FirstOffset, // Start from beginning for peek
 		CommitInterval: 0,                 // CRITICAL: Disable auto-commit

@@ -106,7 +106,7 @@ const (
 
 // Default configuration values
 const (
-	DefaultMaxMessages      = 10
-	DefaultWaitTimeSeconds  = 0
+	DefaultMaxMessages       = 10
+	DefaultWaitTimeSeconds   = 0
 	MaxMessagesPerSQSRequest = 10
 )

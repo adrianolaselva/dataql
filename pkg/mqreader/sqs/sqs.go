@@ -245,7 +245,7 @@ func convertSQSMessage(msg types.Message, queueURL string) mqreader.Message {
 
 	// Parse system attributes
 	for k, v := range msg.Attributes {
-		message.Metadata[string(k)] = v
+		message.Metadata[k] = v
 
 		switch k {
 		case "SentTimestamp":

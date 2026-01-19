@@ -163,7 +163,7 @@ func parseKafkaURL(urlStr string) (*Config, error) {
 		return nil, fmt.Errorf("topic is required in Kafka URL: kafka://broker:port/topic")
 	}
 
-	config.URL = brokerTopic[:slashIdx]       // broker:port
+	config.URL = brokerTopic[:slashIdx]         // broker:port
 	config.QueueName = brokerTopic[slashIdx+1:] // topic name
 
 	// Parse query parameters

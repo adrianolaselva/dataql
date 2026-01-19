@@ -221,9 +221,9 @@ func TestParseKafkaURL(t *testing.T) {
 
 func TestConfigGetTableName(t *testing.T) {
 	tests := []struct {
-		name       string
-		queueName  string
-		wantTable  string
+		name      string
+		queueName string
+		wantTable string
 	}{
 		{
 			name:      "Simple name",

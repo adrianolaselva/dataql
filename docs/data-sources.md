@@ -264,6 +264,126 @@ export AZURE_STORAGE_SAS_TOKEN="?sv=2021-06-08&ss=b&srt=co&sp=rl..."
 dataql run -f "az://mycontainer/data.csv" -q "SELECT * FROM data"
 ```
 
+## Message Queues
+
+Query messages from message queues without consuming/deleting them. Perfect for troubleshooting and debugging.
+
+### Supported Systems
+
+| System | URL Prefix | Status |
+|--------|-----------|--------|
+| AWS SQS | `sqs://` | Supported |
+| Apache Kafka | `kafka://` | Coming soon |
+| RabbitMQ | `rabbitmq://` | Coming soon |
+| Apache Pulsar | `pulsar://` | Coming soon |
+| Google Pub/Sub | `pubsub://` | Coming soon |
+
+### AWS SQS
+
+Query SQS messages without deleting them (uses VisibilityTimeout=0).
+
+#### Configuration
+
+Set AWS credentials via environment variables:
+
+```bash
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_REGION="us-east-1"
+```
+
+#### URL Formats
+
+```bash
+# Simple format: queue name + region
+sqs://my-queue-name?region=us-east-1
+
+# Full AWS URL format (region auto-detected)
+sqs://https://sqs.us-east-1.amazonaws.com/123456789/my-queue
+
+# With options
+sqs://my-queue?region=us-east-1&max_messages=50&wait_time=5
+```
+
+#### URL Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `region` | AWS region (required for simple format) | - |
+| `max_messages` | Maximum messages to retrieve | 10 |
+| `wait_time` | Long polling wait time in seconds (0-20) | 0 |
+
+#### Usage Examples
+
+```bash
+# Preview messages from a queue
+dataql run -f "sqs://my-events-queue?region=us-east-1" \
+  -q "SELECT * FROM my_events_queue LIMIT 10"
+
+# Analyze message types
+dataql run -f "sqs://events-queue?region=us-east-1&max_messages=100" \
+  -q "SELECT body_event_type, COUNT(*) as count FROM events_queue GROUP BY body_event_type"
+
+# Filter error messages
+dataql run -f "sqs://error-queue?region=us-east-1" \
+  -q "SELECT message_id, body_error_message FROM error_queue WHERE body_status = 'error'"
+
+# Check messages with timestamps
+dataql run -f "sqs://orders-queue?region=us-east-1" \
+  -q "SELECT message_id, timestamp, body_order_id FROM orders_queue ORDER BY timestamp DESC"
+```
+
+#### Generated Table Schema
+
+Messages are imported into a table with these columns:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `message_id` | TEXT | SQS Message ID |
+| `source` | TEXT | Queue URL |
+| `timestamp` | TEXT | When message was sent |
+| `timestamp_unix` | TEXT | Unix timestamp |
+| `receive_count` | TEXT | Times message was received |
+| `body` | TEXT | Raw message body |
+| `body_*` | TEXT | Flattened JSON fields (if body is JSON) |
+| `meta_*` | TEXT | Message attributes |
+
+For JSON message bodies, fields are automatically flattened with `body_` prefix:
+
+```json
+// Message body
+{"event": "order_created", "user": {"id": 123, "name": "Alice"}}
+
+// Becomes columns
+body_event = "order_created"
+body_user_id = "123"
+body_user_name = "Alice"
+```
+
+#### Best Practices
+
+1. **Start with low `max_messages`** for exploration
+2. **Use `wait_time` for empty queues** to wait for messages
+3. **Messages are NOT deleted** - safe for troubleshooting
+4. **Filter with SQL** instead of retrieving all messages
+
+### MCP Tool
+
+When using with LLMs via MCP, the `dataql_mq_peek` tool is available:
+
+```json
+{
+  "name": "dataql_mq_peek",
+  "arguments": {
+    "source": "sqs://my-queue?region=us-east-1",
+    "max_messages": 20,
+    "query": "SELECT * FROM my_queue WHERE body_status = 'error'"
+  }
+}
+```
+
+---
+
 ## Multiple Sources
 
 You can query data from multiple sources and join them:

@@ -77,6 +77,7 @@ dataql run -f sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY regi
 - Google Cloud Storage
 - Azure Blob Storage
 - Standard input (stdin)
+- Message Queues (SQS, Kafka, RabbitMQ - peek without consuming)
 
 **Database Connectors:**
 - PostgreSQL
@@ -350,6 +351,13 @@ dataql run -f "s3://my-bucket/data/sales.csv" \
 ```bash
 dataql run -f "postgres://user:pass@localhost:5432/mydb?table=orders" \
   -q "SELECT * FROM orders WHERE status = 'completed'"
+```
+
+**Peek at SQS messages (without consuming):**
+
+```bash
+dataql run -f "sqs://my-events-queue?region=us-east-1" \
+  -q "SELECT message_id, body_event_type, timestamp FROM my_events_queue"
 ```
 
 **Read from stdin:**

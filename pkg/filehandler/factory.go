@@ -28,6 +28,7 @@ const (
 	FormatDuckDB   Format = "duckdb"
 	FormatMongoDB  Format = "mongodb"
 	FormatSQLite   Format = "sqlite"
+	FormatMQ       Format = "mq" // Message Queue (SQS, Kafka, RabbitMQ, etc.)
 )
 
 // HandlerFactory creates file handlers based on format
@@ -64,6 +65,10 @@ func DetectFormat(filePath string) (Format, error) {
 	}
 	if strings.HasPrefix(filePath, "mongodb://") || strings.HasPrefix(filePath, "mongodb+srv://") {
 		return FormatMongoDB, nil
+	}
+	// Check for message queue URLs
+	if IsMQURL(filePath) {
+		return FormatMQ, nil
 	}
 
 	ext := strings.ToLower(filepath.Ext(filePath))
@@ -126,6 +131,27 @@ func IsFormatSupported(format string) bool {
 	f := Format(strings.ToLower(format))
 	for _, supported := range SupportedFormats() {
 		if f == supported {
+			return true
+		}
+	}
+	return false
+}
+
+// mqPrefixes are the URL prefixes for message queue systems
+var mqPrefixes = []string{
+	"sqs://",
+	"kafka://",
+	"rabbitmq://",
+	"amqp://",
+	"pulsar://",
+	"pubsub://",
+}
+
+// IsMQURL checks if the given URL is a message queue URL
+func IsMQURL(urlStr string) bool {
+	lower := strings.ToLower(urlStr)
+	for _, prefix := range mqPrefixes {
+		if strings.HasPrefix(lower, prefix) {
 			return true
 		}
 	}

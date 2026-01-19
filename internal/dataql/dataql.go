@@ -22,6 +22,7 @@ import (
 	jsonHandler "github.com/adrianolaselva/dataql/pkg/filehandler/json"
 	jsonlHandler "github.com/adrianolaselva/dataql/pkg/filehandler/jsonl"
 	mongodbHandler "github.com/adrianolaselva/dataql/pkg/filehandler/mongodb"
+	mqHandler "github.com/adrianolaselva/dataql/pkg/filehandler/mq"
 	orcHandler "github.com/adrianolaselva/dataql/pkg/filehandler/orc"
 	parquetHandler "github.com/adrianolaselva/dataql/pkg/filehandler/parquet"
 	sqliteHandler "github.com/adrianolaselva/dataql/pkg/filehandler/sqlitedb"
@@ -255,6 +256,12 @@ func createFileHandler(params Params, bar *progressbar.ProgressBar, storage stor
 
 	case filehandler.FormatSQLite:
 		return sqliteHandler.NewSqliteHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatMQ:
+		if len(params.FileInputs) != 1 {
+			return nil, fmt.Errorf("message queue URL must be a single connection string")
+		}
+		return mqHandler.NewMQHandler(params.FileInputs[0], bar, storage, params.Lines, params.Collection)
 
 	default:
 		return nil, fmt.Errorf("unsupported file format: %s", format)

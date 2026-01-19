@@ -4,6 +4,7 @@ package kafka
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -136,7 +137,7 @@ func (r *KafkaReader) Peek(ctx context.Context, maxMessages int) ([]mqreader.Mes
 		// FetchMessage does NOT commit - ReadMessage would commit
 		msg, err := r.reader.FetchMessage(peekCtx)
 		if err != nil {
-			if err == context.DeadlineExceeded || err == context.Canceled {
+			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 				// Timeout reached, return what we have
 				break
 			}

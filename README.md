@@ -419,6 +419,7 @@ For detailed documentation, see:
 
 - Go 1.24 or higher
 - GCC (for CGO compilation - required for SQLite, DuckDB)
+- Docker and Docker Compose (for E2E tests)
 
 ### Building
 
@@ -429,8 +430,30 @@ make build
 ### Testing
 
 ```bash
+# Unit tests
 make test
+
+# E2E tests (requires Docker)
+make e2e-up           # Start infrastructure (PostgreSQL, MySQL, MongoDB, Kafka, LocalStack)
+make e2e-wait         # Wait for services to be healthy
+make e2e-test-scripts # Run all E2E tests
+make e2e-down         # Stop infrastructure
 ```
+
+### E2E Test Coverage
+
+DataQL includes comprehensive E2E tests for all data sources:
+
+| Data Source | Tests | Status |
+|-------------|-------|--------|
+| PostgreSQL | 26 | SELECT, WHERE, ORDER BY, LIMIT, aggregates, exports |
+| MySQL | 26 | SELECT, WHERE, ORDER BY, LIMIT, aggregates, exports |
+| MongoDB | 20+ | Collections, queries, filters, exports |
+| Kafka | 10+ | Peek mode, message parsing, exports |
+| S3 (LocalStack) | 13 | CSV, JSON, JSONL file reading, queries, exports |
+| SQS (LocalStack) | 16 | Message reading, filtering, aggregation, exports |
+
+See [e2e/README.md](e2e/README.md) for detailed E2E testing documentation.
 
 ### Linting
 

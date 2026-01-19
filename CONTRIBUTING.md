@@ -57,21 +57,28 @@ make e2e-wait
 
 **Running E2E Tests:**
 ```bash
-# Run all e2e tests
-make e2e-test
+# Run all shell-based e2e tests (recommended)
+make e2e-test-scripts
 
-# Or run from the e2e directory
-cd e2e
-make test
+# Or run Go-based integration tests
+make e2e-test
 ```
 
 **Running Specific Test Suites:**
 ```bash
+# From project root
+make e2e-test-postgres   # PostgreSQL tests (26 tests)
+make e2e-test-mysql      # MySQL tests (26 tests)
+make e2e-test-mongodb    # MongoDB tests (20+ tests)
+make e2e-test-kafka      # Kafka tests (10+ tests)
+make e2e-test-s3         # S3 tests (13 tests)
+make e2e-test-sqs        # SQS tests (16 tests)
+
+# Or from e2e directory
 cd e2e
-make test-postgres   # PostgreSQL tests
-make test-mysql      # MySQL tests
-make test-mongodb    # MongoDB tests
-make test-kafka      # Kafka tests
+make test-postgres
+make test-s3
+make test-sqs
 ```
 
 **Stopping the E2E Environment:**
@@ -120,19 +127,30 @@ e2e/
 ├── Makefile               # Test commands
 ├── README.md              # E2E documentation
 ├── scripts/               # Initialization scripts
-│   ├── init-postgres.sql
-│   ├── init-mysql.sql
-│   ├── init-mongodb.js
-│   └── init-localstack.sh
+│   ├── init-postgres.sql  # PostgreSQL schema and data
+│   ├── init-mysql.sql     # MySQL schema and data
+│   ├── init-mongodb.js    # MongoDB collections and data
+│   └── init-localstack.sh # S3 buckets, SQS queues, DynamoDB tables
 └── tests/                 # Test scripts
     ├── test-all.sh        # Run all test suites
-    ├── test-postgres.sh   # PostgreSQL tests
-    ├── test-mysql.sh      # MySQL tests
-    ├── test-mongodb.sh    # MongoDB tests
-    ├── test-kafka.sh      # Kafka tests
-    ├── test-s3.sh         # S3 tests (LocalStack)
-    └── test-sqs.sh        # SQS tests (LocalStack)
+    ├── test-postgres.sh   # PostgreSQL tests (26 tests)
+    ├── test-mysql.sh      # MySQL tests (26 tests)
+    ├── test-mongodb.sh    # MongoDB tests (20+ tests)
+    ├── test-kafka.sh      # Kafka tests (10+ tests)
+    ├── test-s3.sh         # S3 tests (13 tests) - CSV, JSON, JSONL from LocalStack
+    └── test-sqs.sh        # SQS tests (16 tests) - Message queue reading from LocalStack
 ```
+
+### Test Coverage by Data Source
+
+| Source | Tests | Coverage |
+|--------|-------|----------|
+| PostgreSQL | 26 | SELECT, WHERE, ORDER BY, LIMIT, aggregates, exports |
+| MySQL | 26 | SELECT, WHERE, ORDER BY, LIMIT, aggregates, exports |
+| MongoDB | 20+ | Collections, queries, filters, exports |
+| Kafka | 10+ | Peek mode, message parsing, exports |
+| S3 | 13 | File reading (CSV, JSON, JSONL), queries, exports |
+| SQS | 16 | Message reading, filtering, aggregation, exports |
 
 ## Pull Request Process
 
@@ -151,11 +169,20 @@ e2e/
 3. **Run E2E tests:**
    ```bash
    make e2e-up
-   make e2e-test
+   make e2e-wait
+   make e2e-test-scripts
    make e2e-down
    ```
 
-4. **Update documentation** if needed
+4. **Verify all test suites pass:**
+   - PostgreSQL (26 tests)
+   - MySQL (26 tests)
+   - MongoDB (20+ tests)
+   - Kafka (10+ tests)
+   - S3 (13 tests)
+   - SQS (16 tests)
+
+5. **Update documentation** if needed
 
 ### PR Requirements
 

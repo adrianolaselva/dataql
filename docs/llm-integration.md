@@ -2,14 +2,55 @@
 
 DataQL enables Large Language Models (LLMs) to efficiently query and transform data without loading entire files into context, dramatically reducing token consumption.
 
-## Why DataQL for LLMs?
+---
 
-| Traditional Approach | With DataQL |
-|---------------------|-------------|
-| Send 10MB CSV to context | Run `SELECT * WHERE status='active' LIMIT 10` |
-| ~100,000+ tokens consumed | ~500 tokens (query + result) |
-| Limited by context window | No file size limit |
-| LLM processes raw data | LLM receives filtered results |
+## The Problem
+
+LLMs are powerful, but they have a fundamental limitation: **context windows**. When you need to analyze a data file, you face tough choices:
+
+1. **Send the entire file**: A 10MB CSV consumes ~100,000+ tokens. At $3 per million tokens, that's $0.30+ per query. And many files simply won't fit.
+
+2. **Sample the data**: You might miss important patterns. "Show me the first 100 rows" rarely answers real questions.
+
+3. **Pre-process externally**: Break the conversational flow. Write scripts. Lose the interactive nature of LLM assistance.
+
+## The Solution
+
+DataQL acts as a **data access layer** for LLMs. Instead of sending raw data, the LLM sends SQL queries and receives only the results it needs:
+
+```
+┌─────────────────┐                      ┌─────────────────┐
+│      LLM        │  "SELECT region,     │    DataQL       │
+│                 │   SUM(sales)         │                 │
+│ "Analyze sales  │   FROM sales         │  ┌───────────┐  │
+│  by region"     │ ──────────────────►  │  │ 10GB CSV  │  │
+│                 │                      │  └───────────┘  │
+│                 │  ◄──────────────────  │                 │
+│                 │  {North: $1.2M,      │  Query Result:  │
+│                 │   South: $980K}      │  2 rows, 50     │
+│                 │                      │  tokens         │
+└─────────────────┘                      └─────────────────┘
+```
+
+## Why This Matters
+
+| Scenario | Without DataQL | With DataQL |
+|----------|---------------|-------------|
+| Analyze 10MB CSV | ~100,000 tokens ($3+) | ~500 tokens ($0.01) |
+| Find specific records | Load everything, filter in context | SQL WHERE clause |
+| Aggregate statistics | Manual calculation by LLM | SQL SUM, AVG, COUNT |
+| Join multiple files | Impossible in context | Single SQL JOIN |
+| Query cloud storage | Download → Script → Parse | One command |
+| Repeated analysis | Re-send file each time | Query as needed |
+
+### Real Numbers
+
+- **10MB CSV file**: ~50,000 rows, ~100,000 tokens
+- **Simple query result**: 10 rows, ~200 tokens
+- **Token reduction**: **99.8%**
+- **Cost reduction**: From $0.30 to $0.0006 per query
+
+---
 
 ## Quick Start
 

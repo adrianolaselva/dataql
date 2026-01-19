@@ -18,13 +18,16 @@ It loads data into an SQLite database (in-memory or file-based) enabling powerfu
 
 ## Features
 
-**Supported Input Formats:**
+**Supported File Formats:**
 - CSV (with configurable delimiter)
 - JSON (arrays or single objects)
 - JSONL/NDJSON (newline-delimited JSON)
 - XML
 - YAML
 - Parquet
+- Excel (.xlsx, .xls)
+- Avro
+- ORC
 
 **Data Sources:**
 - Local files
@@ -32,9 +35,13 @@ It loads data into an SQLite database (in-memory or file-based) enabling powerfu
 - Amazon S3
 - Google Cloud Storage
 - Azure Blob Storage
-- PostgreSQL databases
-- MySQL databases
-- DuckDB databases
+- Standard input (stdin)
+
+**Database Connectors:**
+- PostgreSQL
+- MySQL
+- DuckDB
+- MongoDB
 
 **Key Capabilities:**
 - Execute SQL queries using SQLite syntax
@@ -43,6 +50,7 @@ It loads data into an SQLite database (in-memory or file-based) enabling powerfu
 - Progress bar for large file operations
 - Parallel file processing for multiple inputs
 - Automatic flattening of nested JSON objects
+- Join data from multiple sources
 
 ## Quick Start
 
@@ -60,6 +68,16 @@ curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/
 irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
 ```
 
+### Hello World
+
+```bash
+# Create a sample CSV file
+echo -e "id,name,age\n1,Alice,28\n2,Bob,35\n3,Charlie,42" > users.csv
+
+# Query the data
+dataql run -f users.csv -q "SELECT * FROM users WHERE age > 30"
+```
+
 ### Basic Usage
 
 ```bash
@@ -72,6 +90,15 @@ dataql run -f users.json -q "SELECT name, email FROM users WHERE status = 'activ
 # Query from URL
 dataql run -f "https://example.com/data.csv" -q "SELECT * FROM data"
 
+# Query from S3
+dataql run -f "s3://my-bucket/data.csv" -q "SELECT * FROM data"
+
+# Query from PostgreSQL
+dataql run -f "postgres://user:pass@localhost/db?table=users" -q "SELECT * FROM users"
+
+# Read from stdin
+cat data.csv | dataql run -f - -q "SELECT * FROM stdin"
+
 # Export results
 dataql run -f input.csv -q "SELECT * FROM input" -e output.jsonl -t jsonl
 ```
@@ -83,15 +110,19 @@ dataql run -f sales.csv
 ```
 
 ```
+dataql> .tables
+dataql> .schema sales
 dataql> SELECT product, SUM(amount) as total FROM sales GROUP BY product ORDER BY total DESC;
+dataql> .exit
 ```
 
 ## Documentation
 
-- [Installation Guide](https://github.com/adrianolaselva/dataql#installation)
-- [Usage Examples](https://github.com/adrianolaselva/dataql#usage)
-- [SQL Reference](https://github.com/adrianolaselva/dataql#sql-reference)
-- [Contributing](https://github.com/adrianolaselva/dataql#contributing)
+- [Getting Started](docs/getting-started.md) - Installation and Hello World examples
+- [CLI Reference](docs/cli-reference.md) - Complete command-line reference
+- [Data Sources](docs/data-sources.md) - Working with S3, GCS, Azure, URLs, and stdin
+- [Database Connections](docs/databases.md) - Connect to PostgreSQL, MySQL, DuckDB, MongoDB
+- [Examples](docs/examples.md) - Real-world usage examples and automation scripts
 
 ## License
 

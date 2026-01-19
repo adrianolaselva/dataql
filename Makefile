@@ -10,7 +10,8 @@ endif
 
 .PHONY: all build test lint run tidy mod-download deps clean coverage \
         build-linux build-linux-arm64 build-darwin build-darwin-arm64 build-windows \
-        build-all install install-local uninstall release-dry-run docker-build
+        build-all install install-local uninstall release-dry-run docker-build \
+        verify verify-binary
 
 all:
 	git rev-parse HEAD
@@ -103,3 +104,20 @@ docker-build:
 
 clean:
 	rm -rf $(PROJECT_NAME) $(PROJECT_NAME).exe dist/ .tmp/
+
+# Verify binary has all expected commands
+verify-binary: build
+	@echo "Verifying binary commands..."
+	@./$(PROJECT_NAME) --version
+	@./$(PROJECT_NAME) run --help > /dev/null && echo "✓ run command OK"
+	@./$(PROJECT_NAME) skills --help > /dev/null && echo "✓ skills command OK"
+	@./$(PROJECT_NAME) mcp --help > /dev/null && echo "✓ mcp command OK"
+	@./$(PROJECT_NAME) mcp serve --help > /dev/null && echo "✓ mcp serve command OK"
+	@./$(PROJECT_NAME) skills install --help > /dev/null && echo "✓ skills install command OK"
+	@./$(PROJECT_NAME) skills list --help > /dev/null && echo "✓ skills list command OK"
+	@echo "All commands verified successfully!"
+
+# Verify installed binary
+verify:
+	@chmod +x scripts/verify-install.sh
+	@scripts/verify-install.sh

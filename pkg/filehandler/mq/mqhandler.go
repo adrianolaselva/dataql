@@ -12,7 +12,8 @@ import (
 
 	"github.com/adrianolaselva/dataql/pkg/filehandler"
 	"github.com/adrianolaselva/dataql/pkg/mqreader"
-	// Import SQS to register it
+	// Import message queue backends to register them
+	_ "github.com/adrianolaselva/dataql/pkg/mqreader/kafka"
 	_ "github.com/adrianolaselva/dataql/pkg/mqreader/sqs"
 	"github.com/adrianolaselva/dataql/pkg/storage"
 	"github.com/schollz/progressbar/v3"

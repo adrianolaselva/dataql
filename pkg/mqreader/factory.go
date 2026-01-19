@@ -35,7 +35,8 @@ func NewReader(config *Config) (MessageQueueReader, error) {
 		// SQS should be registered by the sqs package
 		return nil, fmt.Errorf("SQS reader not registered. Import github.com/adrianolaselva/dataql/pkg/mqreader/sqs")
 	case TypeKafka:
-		return nil, fmt.Errorf("kafka support coming soon")
+		// Kafka should be registered by the kafka package
+		return nil, fmt.Errorf("Kafka reader not registered. Import github.com/adrianolaselva/dataql/pkg/mqreader/kafka")
 	case TypeRabbitMQ:
 		return nil, fmt.Errorf("rabbitmq support coming soon")
 	case TypePulsar:

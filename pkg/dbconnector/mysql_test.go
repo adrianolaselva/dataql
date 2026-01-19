@@ -102,11 +102,11 @@ func TestNewMySQLConnector(t *testing.T) {
 	connector, err := NewMySQLConnector(config)
 
 	if err != nil {
-		t.Errorf("NewMySQLConnector should not return error, got: %v", err)
+		t.Fatalf("NewMySQLConnector should not return error, got: %v", err)
 	}
 
 	if connector == nil {
-		t.Error("NewMySQLConnector should return a connector")
+		t.Fatal("NewMySQLConnector should return a connector")
 	}
 
 	if connector.config.Host != "localhost" {

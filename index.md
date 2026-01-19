@@ -52,6 +52,11 @@ It loads data into an SQLite database (in-memory or file-based) enabling powerfu
 - Automatic flattening of nested JSON objects
 - Join data from multiple sources
 
+**LLM Integration:**
+- MCP Server for Claude Code, OpenAI Codex, Google Gemini
+- Auto-activating Claude Code Skills
+- Token-efficient data processing for AI assistants
+
 ## Quick Start
 
 ### Installation
@@ -122,6 +127,8 @@ dataql> .exit
 - [CLI Reference](docs/cli-reference.md) - Complete command-line reference
 - [Data Sources](docs/data-sources.md) - Working with S3, GCS, Azure, URLs, and stdin
 - [Database Connections](docs/databases.md) - Connect to PostgreSQL, MySQL, DuckDB, MongoDB
+- [LLM Integration](docs/llm-integration.md) - Use DataQL with Claude, Codex, Gemini
+- [MCP Setup](docs/mcp-setup.md) - Configure MCP server for LLM integration
 - [Examples](docs/examples.md) - Real-world usage examples and automation scripts
 
 ## License

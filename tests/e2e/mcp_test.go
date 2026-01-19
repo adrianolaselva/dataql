@@ -2,6 +2,7 @@ package e2e_test
 
 import (
 	"context"
+	"errors"
 	"os/exec"
 	"strings"
 	"testing"
@@ -75,8 +76,8 @@ func TestMCPServeStartsWithoutError(t *testing.T) {
 	// Context deadline exceeded is expected (server is waiting for input)
 	// Any other error would indicate a startup problem
 	if err != nil {
-		exitErr, ok := err.(*exec.ExitError)
-		if ok && exitErr.ExitCode() != 0 {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() != 0 {
 			// Check if it's a timeout (expected) or actual error
 			if ctx.Err() != context.DeadlineExceeded {
 				t.Errorf("MCP server failed to start: %v", err)
@@ -101,8 +102,8 @@ func TestMCPServeDebugFlag(t *testing.T) {
 	if err != nil {
 		if ctx.Err() != context.DeadlineExceeded {
 			// Check if error is about unknown flag
-			exitErr, ok := err.(*exec.ExitError)
-			if ok && strings.Contains(string(exitErr.Stderr), "unknown flag") {
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) && strings.Contains(string(exitErr.Stderr), "unknown flag") {
 				t.Errorf("MCP server doesn't recognize --debug flag")
 			}
 		}

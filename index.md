@@ -131,6 +131,10 @@ dataql> .exit
 - [MCP Setup](docs/mcp-setup.md) - Configure MCP server for LLM integration
 - [Examples](docs/examples.md) - Real-world usage examples and automation scripts
 
+## About
+
+A rewrite of [csvql](https://github.com/adrianolaselva/csvql) (2019), built entirely with AI assistance. An experiment in AI-assisted development that turned out pretty well.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](https://github.com/adrianolaselva/dataql/blob/main/LICENSE) file for details.

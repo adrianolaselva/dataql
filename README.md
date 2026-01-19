@@ -396,12 +396,18 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+## About This Project
+
+This is a rewrite of [csvql](https://github.com/adrianolaselva/csvql), an earlier experiment I did back in 2019. The original was simple and limited. This version? Built entirely with AI assistance (Claude Code). I wanted to see how far AI-assisted development could go, and honestly, it went pretty far. The code, docs, tests - all of it came from conversations with an AI. Make of that what you will.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
+- [csvql](https://github.com/adrianolaselva/csvql) - The original project that inspired this rewrite
+- [Claude Code](https://claude.ai/claude-code) - AI assistant that helped build this entire project
 - [SQLite](https://www.sqlite.org/) - Embedded database engine
 - [Cobra](https://github.com/spf13/cobra) - CLI framework
 - [go-sqlite3](https://github.com/mattn/go-sqlite3) - SQLite driver for Go

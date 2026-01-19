@@ -169,20 +169,20 @@ func registerTools(s *server.MCPServer) {
 
 // Handler functions
 
-func handleQuery(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	source, err := request.RequireString("source")
-	if err != nil {
+func handleQuery(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	source := getStringArg(request, "source")
+	if source == "" {
 		return mcp.NewToolResultError("source parameter is required"), nil
 	}
 
-	query, err := request.RequireString("query")
-	if err != nil {
+	query := getStringArg(request, "query")
+	if query == "" {
 		return mcp.NewToolResultError("query parameter is required"), nil
 	}
 
-	delimiter := ","
-	if d, err := request.RequireString("delimiter"); err == nil && d != "" {
-		delimiter = d
+	delimiter := getStringArg(request, "delimiter")
+	if delimiter == "" {
+		delimiter = ","
 	}
 
 	// Execute query using dataql
@@ -194,9 +194,9 @@ func handleQuery(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToo
 	return mcp.NewToolResultText(result), nil
 }
 
-func handleSchema(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	source, err := request.RequireString("source")
-	if err != nil {
+func handleSchema(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	source := getStringArg(request, "source")
+	if source == "" {
 		return mcp.NewToolResultError("source parameter is required"), nil
 	}
 
@@ -211,9 +211,9 @@ func handleSchema(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallTo
 	return mcp.NewToolResultText(result), nil
 }
 
-func handlePreview(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	source, err := request.RequireString("source")
-	if err != nil {
+func handlePreview(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	source := getStringArg(request, "source")
+	if source == "" {
 		return mcp.NewToolResultError("source parameter is required"), nil
 	}
 
@@ -243,19 +243,19 @@ func handlePreview(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallT
 	return mcp.NewToolResultText(result), nil
 }
 
-func handleAggregate(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	source, err := request.RequireString("source")
-	if err != nil {
+func handleAggregate(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	source := getStringArg(request, "source")
+	if source == "" {
 		return mcp.NewToolResultError("source parameter is required"), nil
 	}
 
-	column, err := request.RequireString("column")
-	if err != nil {
+	column := getStringArg(request, "column")
+	if column == "" {
 		return mcp.NewToolResultError("column parameter is required"), nil
 	}
 
-	operation, err := request.RequireString("operation")
-	if err != nil {
+	operation := getStringArg(request, "operation")
+	if operation == "" {
 		return mcp.NewToolResultError("operation parameter is required"), nil
 	}
 
@@ -276,7 +276,8 @@ func handleAggregate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 	tableName := getTableName(source)
 
 	var query string
-	if groupBy, err := request.RequireString("group_by"); err == nil && groupBy != "" {
+	groupBy := getStringArg(request, "group_by")
+	if groupBy != "" {
 		query = fmt.Sprintf("SELECT %s, %s(%s) as result FROM %s GROUP BY %s ORDER BY result DESC",
 			groupBy, sqlOp, column, tableName, groupBy)
 	} else {
@@ -289,6 +290,18 @@ func handleAggregate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 	}
 
 	return mcp.NewToolResultText(result), nil
+}
+
+// getStringArg extracts a string argument from the request without returning an error
+func getStringArg(request mcp.CallToolRequest, name string) string {
+	if args, ok := request.Params.Arguments.(map[string]interface{}); ok {
+		if val, exists := args[name]; exists {
+			if str, ok := val.(string); ok {
+				return str
+			}
+		}
+	}
+	return ""
 }
 
 // Helper functions

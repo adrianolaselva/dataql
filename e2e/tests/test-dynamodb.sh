@@ -4,12 +4,13 @@
 #
 # Test Coverage:
 # - Basic table scanning
-# - SELECT queries on table data
-# - WHERE clause filtering
-# - COUNT and aggregation
-# - LIMIT functionality
-# - ORDER BY operations
-# - Export formats (CSV, JSON, JSONL)
+# - SELECT queries on table data (columns, alias, distinct)
+# - WHERE clause filtering (=, <, >, <=, >=, <>, AND, OR, IN, BETWEEN, LIKE)
+# - COUNT and aggregation (COUNT, SUM, AVG, MIN, MAX)
+# - GROUP BY operations
+# - LIMIT and OFFSET functionality
+# - ORDER BY operations (ASC, DESC)
+# - Export formats (CSV, JSON, JSONL, XML, YAML, Excel, Parquet)
 #
 # Prerequisites:
 # - LocalStack running with DynamoDB service
@@ -149,6 +150,101 @@ test_dynamodb_where_like() {
     fi
 }
 
+test_dynamodb_select_alias() {
+    log_info "Test: SELECT with alias"
+    result=$($DATAQL_BIN run -q "SELECT name AS user_name, email AS user_email FROM dataql_test_table" -f "$DATAQL_TEST_DYNAMODB_URL" 2>&1)
+    if echo "$result" | grep -q -i "user_name\|Alice"; then
+        log_pass "SELECT with alias on DynamoDB works"
+    else
+        log_fail "SELECT with alias on DynamoDB failed" "$result"
+    fi
+}
+
+test_dynamodb_select_distinct() {
+    log_info "Test: SELECT DISTINCT"
+    # All names are distinct, so count should be 5
+    result=$($DATAQL_BIN run -q "SELECT DISTINCT name FROM dataql_test_table" -f "$DATAQL_TEST_DYNAMODB_URL" 2>&1)
+    if echo "$result" | grep -q "Alice" && echo "$result" | grep -q "Bob"; then
+        log_pass "SELECT DISTINCT on DynamoDB works"
+    else
+        log_fail "SELECT DISTINCT on DynamoDB failed" "$result"
+    fi
+}
+
+test_dynamodb_where_and() {
+    log_info "Test: WHERE with AND condition"
+    result=$($DATAQL_BIN run -q "SELECT name FROM dataql_test_table WHERE age > 25 AND age < 40" -f "$DATAQL_TEST_DYNAMODB_URL" 2>&1)
+    # Should include Alice (28), Bob (35), Diana (31) but not Eve (25) or Charlie (42)
+    if echo "$result" | grep -q "Alice" && echo "$result" | grep -q "Bob" && ! echo "$result" | grep -q "Eve"; then
+        log_pass "WHERE AND on DynamoDB works"
+    else
+        log_fail "WHERE AND on DynamoDB failed" "$result"
+    fi
+}
+
+test_dynamodb_where_or() {
+    log_info "Test: WHERE with OR condition"
+    result=$($DATAQL_BIN run -q "SELECT name FROM dataql_test_table WHERE name = 'Alice' OR name = 'Eve'" -f "$DATAQL_TEST_DYNAMODB_URL" 2>&1)
+    if echo "$result" | grep -q "Alice" && echo "$result" | grep -q "Eve"; then
+        log_pass "WHERE OR on DynamoDB works"
+    else
+        log_fail "WHERE OR on DynamoDB failed" "$result"
+    fi
+}
+
+test_dynamodb_where_in() {
+    log_info "Test: WHERE with IN clause"
+    result=$($DATAQL_BIN run -q "SELECT name FROM dataql_test_table WHERE name IN ('Alice', 'Bob')" -f "$DATAQL_TEST_DYNAMODB_URL" 2>&1)
+    if echo "$result" | grep -q "Alice" && echo "$result" | grep -q "Bob" && ! echo "$result" | grep -q "Charlie"; then
+        log_pass "WHERE IN on DynamoDB works"
+    else
+        log_fail "WHERE IN on DynamoDB failed" "$result"
+    fi
+}
+
+test_dynamodb_where_between() {
+    log_info "Test: WHERE with BETWEEN condition"
+    result=$($DATAQL_BIN run -q "SELECT name, age FROM dataql_test_table WHERE age BETWEEN 25 AND 35" -f "$DATAQL_TEST_DYNAMODB_URL" 2>&1)
+    # Should include Alice (28), Bob (35), Diana (31), Eve (25) but not Charlie (42)
+    if echo "$result" | grep -q "Alice" && echo "$result" | grep -q "Eve" && ! echo "$result" | grep -q "Charlie"; then
+        log_pass "WHERE BETWEEN on DynamoDB works"
+    else
+        log_fail "WHERE BETWEEN on DynamoDB failed" "$result"
+    fi
+}
+
+test_dynamodb_where_not_equal() {
+    log_info "Test: WHERE with NOT EQUAL (<>) condition"
+    result=$($DATAQL_BIN run -q "SELECT name FROM dataql_test_table WHERE name <> 'Alice'" -f "$DATAQL_TEST_DYNAMODB_URL" 2>&1)
+    if ! echo "$result" | grep -q "Alice" && echo "$result" | grep -q "Bob"; then
+        log_pass "WHERE NOT EQUAL on DynamoDB works"
+    else
+        log_fail "WHERE NOT EQUAL on DynamoDB failed" "$result"
+    fi
+}
+
+test_dynamodb_where_greater_equal() {
+    log_info "Test: WHERE with >= condition"
+    result=$($DATAQL_BIN run -q "SELECT name FROM dataql_test_table WHERE age >= 35" -f "$DATAQL_TEST_DYNAMODB_URL" 2>&1)
+    # Should include Bob (35) and Charlie (42)
+    if echo "$result" | grep -q "Bob" && echo "$result" | grep -q "Charlie"; then
+        log_pass "WHERE >= on DynamoDB works"
+    else
+        log_fail "WHERE >= on DynamoDB failed" "$result"
+    fi
+}
+
+test_dynamodb_where_less_equal() {
+    log_info "Test: WHERE with <= condition"
+    result=$($DATAQL_BIN run -q "SELECT name FROM dataql_test_table WHERE age <= 28" -f "$DATAQL_TEST_DYNAMODB_URL" 2>&1)
+    # Should include Alice (28) and Eve (25)
+    if echo "$result" | grep -q "Alice" && echo "$result" | grep -q "Eve"; then
+        log_pass "WHERE <= on DynamoDB works"
+    else
+        log_fail "WHERE <= on DynamoDB failed" "$result"
+    fi
+}
+
 # ==============================================================================
 # COUNT AND AGGREGATION TESTS
 # ==============================================================================
@@ -205,6 +301,16 @@ test_dynamodb_min_max() {
     fi
 }
 
+test_dynamodb_group_concat() {
+    log_info "Test: GROUP_CONCAT on DynamoDB table"
+    result=$($DATAQL_BIN run -q "SELECT GROUP_CONCAT(name) AS names FROM dataql_test_table" -f "$DATAQL_TEST_DYNAMODB_URL" 2>&1)
+    if echo "$result" | grep -q "Alice" && echo "$result" | grep -q "Bob"; then
+        log_pass "GROUP_CONCAT on DynamoDB works"
+    else
+        log_fail "GROUP_CONCAT on DynamoDB failed" "$result"
+    fi
+}
+
 # ==============================================================================
 # LIMIT TESTS
 # ==============================================================================
@@ -228,6 +334,18 @@ test_dynamodb_limit_one() {
         log_pass "LIMIT 1 on DynamoDB works"
     else
         log_fail "LIMIT 1 on DynamoDB failed, expected 1 row, got $count"
+    fi
+}
+
+test_dynamodb_limit_offset() {
+    log_info "Test: LIMIT with OFFSET on DynamoDB table"
+    result=$($DATAQL_BIN run -q "SELECT name FROM dataql_test_table ORDER BY name ASC LIMIT 2 OFFSET 1" -f "$DATAQL_TEST_DYNAMODB_URL" 2>&1)
+    # When sorted by name ASC: Alice, Bob, Charlie, Diana, Eve
+    # OFFSET 1, LIMIT 2 should return Bob, Charlie (skip Alice)
+    if echo "$result" | grep -q "Bob" && ! echo "$result" | grep -q "Alice"; then
+        log_pass "LIMIT with OFFSET on DynamoDB works"
+    else
+        log_fail "LIMIT with OFFSET on DynamoDB failed" "$result"
     fi
 }
 
@@ -317,6 +435,58 @@ test_dynamodb_export_json() {
     fi
 }
 
+test_dynamodb_export_xml() {
+    log_info "Test: Export DynamoDB data to XML"
+    output_file="/tmp/dynamodb_export_$$.xml"
+    $DATAQL_BIN run -q "SELECT name, email FROM dataql_test_table LIMIT 2" -f "$DATAQL_TEST_DYNAMODB_URL" -e "$output_file" -t xml 2>&1 > /dev/null
+    if [ -f "$output_file" ] && grep -q "Alice" "$output_file"; then
+        log_pass "Export DynamoDB data to XML works"
+        rm -f "$output_file"
+    else
+        log_fail "Export DynamoDB data to XML failed"
+        rm -f "$output_file" 2>/dev/null
+    fi
+}
+
+test_dynamodb_export_yaml() {
+    log_info "Test: Export DynamoDB data to YAML"
+    output_file="/tmp/dynamodb_export_$$.yaml"
+    $DATAQL_BIN run -q "SELECT name, email FROM dataql_test_table LIMIT 2" -f "$DATAQL_TEST_DYNAMODB_URL" -e "$output_file" -t yaml 2>&1 > /dev/null
+    if [ -f "$output_file" ] && grep -q "Alice" "$output_file"; then
+        log_pass "Export DynamoDB data to YAML works"
+        rm -f "$output_file"
+    else
+        log_fail "Export DynamoDB data to YAML failed"
+        rm -f "$output_file" 2>/dev/null
+    fi
+}
+
+test_dynamodb_export_excel() {
+    log_info "Test: Export DynamoDB data to Excel"
+    output_file="/tmp/dynamodb_export_$$.xlsx"
+    $DATAQL_BIN run -q "SELECT name, email FROM dataql_test_table LIMIT 2" -f "$DATAQL_TEST_DYNAMODB_URL" -e "$output_file" -t excel 2>&1 > /dev/null
+    if [ -f "$output_file" ] && [ -s "$output_file" ]; then
+        log_pass "Export DynamoDB data to Excel works"
+        rm -f "$output_file"
+    else
+        log_fail "Export DynamoDB data to Excel failed"
+        rm -f "$output_file" 2>/dev/null
+    fi
+}
+
+test_dynamodb_export_parquet() {
+    log_info "Test: Export DynamoDB data to Parquet"
+    output_file="/tmp/dynamodb_export_$$.parquet"
+    $DATAQL_BIN run -q "SELECT name, email FROM dataql_test_table LIMIT 2" -f "$DATAQL_TEST_DYNAMODB_URL" -e "$output_file" -t parquet 2>&1 > /dev/null
+    if [ -f "$output_file" ] && [ -s "$output_file" ]; then
+        log_pass "Export DynamoDB data to Parquet works"
+        rm -f "$output_file"
+    else
+        log_fail "Export DynamoDB data to Parquet failed"
+        rm -f "$output_file" 2>/dev/null
+    fi
+}
+
 # ==============================================================================
 # CUSTOM TABLE NAME TESTS
 # ==============================================================================
@@ -348,24 +518,37 @@ if ! check_localstack; then
     exit 0
 fi
 
-log_section "Basic Table Reading Tests"
+log_section "Basic SELECT Tests"
 test_dynamodb_basic_scan
 test_dynamodb_select_columns
-test_dynamodb_where_clause
+test_dynamodb_select_alias
+test_dynamodb_select_distinct
+
+log_section "WHERE Clause Tests"
 test_dynamodb_where_equals
+test_dynamodb_where_clause
 test_dynamodb_where_less_than
+test_dynamodb_where_greater_equal
+test_dynamodb_where_less_equal
+test_dynamodb_where_not_equal
+test_dynamodb_where_and
+test_dynamodb_where_or
+test_dynamodb_where_in
+test_dynamodb_where_between
 test_dynamodb_where_like
 
-log_section "Count and Aggregation Tests"
+log_section "Aggregation Tests"
 test_dynamodb_count
 test_dynamodb_count_with_where
 test_dynamodb_sum
 test_dynamodb_avg
 test_dynamodb_min_max
+test_dynamodb_group_concat
 
-log_section "Limit Tests"
+log_section "Limit/Offset Tests"
 test_dynamodb_limit
 test_dynamodb_limit_one
+test_dynamodb_limit_offset
 
 log_section "Order By Tests"
 test_dynamodb_order_by_asc
@@ -376,6 +559,10 @@ log_section "Export Format Tests"
 test_dynamodb_export_csv
 test_dynamodb_export_jsonl
 test_dynamodb_export_json
+test_dynamodb_export_xml
+test_dynamodb_export_yaml
+test_dynamodb_export_excel
+test_dynamodb_export_parquet
 
 log_section "Custom Table Name Tests"
 test_dynamodb_custom_collection

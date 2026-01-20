@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="img/dataql.jpg" alt="DataQL" width="200">
+</p>
+
 # Data Sources
 
 DataQL supports multiple data sources including local files, URLs, cloud storage, and stdin.

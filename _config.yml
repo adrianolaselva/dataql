@@ -1,8 +1,11 @@
 # Jekyll configuration for DataQL documentation
 title: DataQL
-description: A powerful CLI tool for querying and transforming data across multiple formats using SQL
+description: Query any data file using SQL. One command, instant results.
 url: "https://adrianolaselva.github.io"
 baseurl: "/dataql"
+
+# Logo and branding
+logo: /docs/img/dataql.jpg
 
 # Theme
 remote_theme: pages-themes/cayman@v0.2.0
@@ -34,6 +37,7 @@ exclude:
   - dataql
   - "*.db"
   - vendor/
+  - e2e/
 
 # Include specific files
 include:
@@ -48,3 +52,20 @@ defaults:
       type: "pages"
     values:
       layout: "default"
+
+# Navigation
+nav:
+  - title: Home
+    url: /
+  - title: Getting Started
+    url: /docs/getting-started
+  - title: CLI Reference
+    url: /docs/cli-reference
+  - title: Data Sources
+    url: /docs/data-sources
+  - title: Databases
+    url: /docs/databases
+  - title: LLM Integration
+    url: /docs/llm-integration
+  - title: Examples
+    url: /docs/examples

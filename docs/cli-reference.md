@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="img/dataql.jpg" alt="DataQL" width="200">
+</p>
+
 # CLI Reference
 
 Complete command-line reference for DataQL.

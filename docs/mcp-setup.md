@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="img/dataql.jpg" alt="DataQL" width="200">
+</p>
+
 # MCP Server Setup Guide
 
 Complete guide for configuring DataQL as a Model Context Protocol (MCP) server for LLM integration.

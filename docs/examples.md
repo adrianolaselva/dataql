@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="img/dataql.jpg" alt="DataQL" width="200">
+</p>
+
 # Examples
 
 Real-world examples of using DataQL for various data processing tasks.

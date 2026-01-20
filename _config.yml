@@ -59,6 +59,8 @@ nav:
     url: /
   - title: Getting Started
     url: /docs/getting-started
+  - title: Architecture
+    url: /docs/architecture
   - title: CLI Reference
     url: /docs/cli-reference
   - title: Data Sources

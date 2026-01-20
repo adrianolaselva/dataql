@@ -478,6 +478,7 @@ SELECT * FROM data ORDER BY created_at DESC LIMIT 100;
 For detailed documentation, see:
 
 - [Getting Started](docs/getting-started.md) - Installation and Hello World examples
+- [Architecture](docs/architecture.md) - System architecture and design diagrams
 - [CLI Reference](docs/cli-reference.md) - Complete command-line reference
 - [Data Sources](docs/data-sources.md) - Working with S3, GCS, Azure, URLs, and stdin
 - [Database Connections](docs/databases.md) - Connect to PostgreSQL, MySQL, DuckDB, MongoDB

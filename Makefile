@@ -22,7 +22,7 @@ endif
 .PHONY: all build test lint run tidy mod-download deps clean coverage \
         build-linux build-linux-arm64 build-darwin build-darwin-arm64 build-windows \
         build-all install install-local uninstall release-dry-run docker-build \
-        verify verify-binary \
+        verify verify-binary fmt fmt-check hooks hooks-remove check \
         e2e-up e2e-down e2e-logs e2e-status e2e-clean e2e-test e2e-wait e2e-reset \
         e2e-test-scripts e2e-test-postgres e2e-test-mysql e2e-test-mongodb \
         e2e-test-kafka e2e-test-s3 e2e-test-sqs
@@ -47,6 +47,34 @@ lint:
 lint-out:
 	@mkdir -p .tmp
 	golangci-lint run --out-format checkstyle > .tmp/lint.out
+
+# Format code with gofmt
+fmt:
+	@echo "Formatting code..."
+	@gofmt -s -w .
+	@echo "✓ Code formatted"
+
+# Check code formatting (no changes)
+fmt-check:
+	@echo "Checking code formatting..."
+	@test -z "$$(gofmt -l . | grep -v vendor/ | grep -v '.git/')" || (echo "Run 'make fmt' to fix" && gofmt -l . | grep -v vendor/ | grep -v '.git/' && exit 1)
+	@echo "✓ Code is properly formatted"
+
+# Install git hooks
+hooks:
+	@echo "Installing git hooks..."
+	@cp scripts/pre-commit .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@echo "✓ Pre-commit hook installed"
+
+# Remove git hooks
+hooks-remove:
+	@rm -f .git/hooks/pre-commit
+	@echo "✓ Pre-commit hook removed"
+
+# Run all checks (fmt + lint)
+check: fmt-check lint
+	@echo "✓ All checks passed"
 
 run:
 	go run ./main.go

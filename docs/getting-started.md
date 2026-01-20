@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="img/dataql.jpg" alt="DataQL Logo" width="300">
+  <img src="img/dataql.png" alt="DataQL Logo" width="300">
 </p>
 
 # Getting Started with DataQL
@@ -26,21 +26,29 @@ irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install
 
 ### Install Specific Version
 
-```bash
-# Linux/macOS
-curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --version v0.1.0
+**Linux / macOS:**
 
-# Windows
+```bash
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --version v0.1.0
+```
+
+**Windows (PowerShell):**
+
+```powershell
 $env:DATAQL_VERSION="v0.1.0"; irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
 ```
 
 ### User Installation (No sudo required)
 
-```bash
-# Linux/macOS - Installs to ~/.local/bin
-curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --local
+**Linux / macOS** (Installs to ~/.local/bin):
 
-# Windows
+```bash
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --local
+```
+
+**Windows (PowerShell):**
+
+```powershell
 $env:DATAQL_USER_INSTALL="true"; irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
 ```
 
@@ -63,13 +71,15 @@ dataql --version
 
 ### Updating DataQL
 
-**Upgrade to latest version:**
+**Upgrade to latest version (Linux / macOS):**
 
 ```bash
-# Linux/macOS - Only upgrades if a newer version is available
 curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --upgrade
+```
 
-# Force reinstall (even if same version)
+**Force reinstall (even if same version):**
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --force
 ```
 

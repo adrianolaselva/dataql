@@ -5,7 +5,7 @@ url: "https://adrianolaselva.github.io"
 baseurl: "/dataql"
 
 # Logo and branding
-logo: /docs/img/dataql.jpg
+logo: /docs/img/dataql.png
 
 # Theme
 remote_theme: pages-themes/cayman@v0.2.0

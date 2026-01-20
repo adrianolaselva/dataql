@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="img/dataql.jpg" alt="DataQL Logo" width="250">
+  <img src="img/dataql.png" alt="DataQL Logo" width="250">
 </p>
 
 # LLM Integration Guide

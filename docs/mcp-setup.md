@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="img/dataql.jpg" alt="DataQL" width="200">
+  <img src="img/dataql.png" alt="DataQL" width="200">
 </p>
 
 # MCP Server Setup Guide

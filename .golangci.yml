@@ -30,21 +30,14 @@ linters:
     - errcheck # Too many false positives for defer Close() calls
     - staticcheck # Too strict style rules for this codebase
     - gosec # Too many false positives for CLI file processing tool
-
-linters-settings:
-  tagliatelle:
-    case:
-      use-field-name: true
-      rules:
-        json: snake
-  whitespace:
-    multi-func: true
-  goimports:
-    local-prefixes: adrianolaselva.github.io/csvql
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gosec
-        - errcheck
+  settings:
+    tagliatelle:
+      case:
+        use-field-name: true
+        rules:
+          json: snake
+    whitespace:
+      multi-func: true
+  exclusions:
+    paths:
+      - _test\.go

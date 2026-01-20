@@ -117,7 +117,7 @@ awslocal sqs get-queue-attributes --queue-url "$QUEUE_URL" \
     --attribute-names ApproximateNumberOfMessages
 
 # ============================================
-# DynamoDB Table Setup (Optional - for future use)
+# DynamoDB Table Setup
 # ============================================
 echo ""
 echo "[DynamoDB] Creating tables..."
@@ -130,16 +130,30 @@ awslocal dynamodb create-table \
         AttributeName=id,KeyType=HASH \
     --billing-mode PAY_PER_REQUEST 2>/dev/null || echo "[DynamoDB] Table already exists"
 
-# Insert sample data
+# Wait for table to be active
+echo "[DynamoDB] Waiting for table to be active..."
+awslocal dynamodb wait table-exists --table-name dataql-test-table 2>/dev/null || true
+
+# Insert sample data (5 items to match other test data sources)
 echo "[DynamoDB] Inserting test data..."
 awslocal dynamodb put-item --table-name dataql-test-table \
-    --item '{"id": {"S": "1"}, "name": {"S": "Alice"}, "email": {"S": "alice@example.com"}}'
+    --item '{"id": {"S": "1"}, "name": {"S": "Alice"}, "email": {"S": "alice@example.com"}, "age": {"N": "28"}}'
 
 awslocal dynamodb put-item --table-name dataql-test-table \
-    --item '{"id": {"S": "2"}, "name": {"S": "Bob"}, "email": {"S": "bob@example.com"}}'
+    --item '{"id": {"S": "2"}, "name": {"S": "Bob"}, "email": {"S": "bob@example.com"}, "age": {"N": "35"}}'
 
 awslocal dynamodb put-item --table-name dataql-test-table \
-    --item '{"id": {"S": "3"}, "name": {"S": "Charlie"}, "email": {"S": "charlie@example.com"}}'
+    --item '{"id": {"S": "3"}, "name": {"S": "Charlie"}, "email": {"S": "charlie@example.com"}, "age": {"N": "42"}}'
+
+awslocal dynamodb put-item --table-name dataql-test-table \
+    --item '{"id": {"S": "4"}, "name": {"S": "Diana"}, "email": {"S": "diana@example.com"}, "age": {"N": "31"}}'
+
+awslocal dynamodb put-item --table-name dataql-test-table \
+    --item '{"id": {"S": "5"}, "name": {"S": "Eve"}, "email": {"S": "eve@example.com"}, "age": {"N": "25"}}'
+
+# Verify table contents
+echo "[DynamoDB] Table item count:"
+awslocal dynamodb scan --table-name dataql-test-table --select COUNT
 
 # ============================================
 # Verification Summary
@@ -156,5 +170,5 @@ echo "    - fixtures/array.json"
 echo "    - fixtures/data.jsonl"
 echo "    - fixtures/nested.json"
 echo "  - SQS Queue: dataql-test-queue (5 messages)"
-echo "  - DynamoDB Table: dataql-test-table (3 items)"
+echo "  - DynamoDB Table: dataql-test-table (5 items)"
 echo ""

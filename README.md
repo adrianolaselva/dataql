@@ -84,6 +84,7 @@ dataql run -f sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY regi
 - MySQL
 - DuckDB
 - MongoDB
+- DynamoDB
 
 **Key Capabilities:**
 - Execute SQL queries using SQLite syntax
@@ -238,6 +239,7 @@ dataql run -f data.jsonl
 | MySQL | `mysql://` | `-f "mysql://user:pass@host/db?table=t"` |
 | DuckDB | `duckdb://` | `-f "duckdb:///path/db.db?table=t"` |
 | MongoDB | `mongodb://` | `-f "mongodb://host/db?collection=c"` |
+| DynamoDB | `dynamodb://` | `-f "dynamodb://region/table-name"` |
 
 ### Command Line Options
 

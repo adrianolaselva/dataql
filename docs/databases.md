@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="img/dataql.jpg" alt="DataQL" width="200">
+</p>
+
 # Database Connections
 
 DataQL can connect to various databases and query their data using SQL.

@@ -1,6 +1,12 @@
+<p align="center">
+  <img src="img/dataql.jpg" alt="DataQL Logo" width="300">
+</p>
+
 # Getting Started with DataQL
 
-This guide will help you get up and running with DataQL in minutes.
+Welcome! This guide will help you get up and running with DataQL in just a few minutes.
+
+DataQL lets you query any data file using SQL - CSV, JSON, Parquet, Excel, and more. Whether you're analyzing local files, querying data from S3, or integrating with LLMs, DataQL makes it simple.
 
 ## Installation
 

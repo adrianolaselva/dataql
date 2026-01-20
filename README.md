@@ -1,14 +1,33 @@
-# DataQL
+<p align="center">
+  <img src="docs/img/dataql.jpg" alt="DataQL Logo" width="400">
+</p>
 
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev)
-[![Build](https://github.com/adrianolaselva/dataql/actions/workflows/build.yml/badge.svg)](https://github.com/adrianolaselva/dataql/actions/workflows/build.yml)
-[![CI](https://github.com/adrianolaselva/dataql/actions/workflows/ci.yml/badge.svg)](https://github.com/adrianolaselva/dataql/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/adrianolaselva/dataql)](https://goreportcard.com/report/github.com/adrianolaselva/dataql)
-[![GoDoc](https://godoc.org/github.com/adrianolaselva/dataql?status.svg)](https://pkg.go.dev/github.com/adrianolaselva/dataql)
-![GitHub issues](https://img.shields.io/github/issues/adrianolaselva/dataql)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<h1 align="center">DataQL</h1>
 
-> A powerful CLI tool for querying and transforming data across multiple formats
+<p align="center">
+  <strong>Query any data file using SQL. One command, instant results.</strong>
+</p>
+
+<p align="center">
+  <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go" alt="Go Version"></a>
+  <a href="https://github.com/adrianolaselva/dataql/actions/workflows/build.yml"><img src="https://github.com/adrianolaselva/dataql/actions/workflows/build.yml/badge.svg" alt="Build"></a>
+  <a href="https://github.com/adrianolaselva/dataql/actions/workflows/ci.yml"><img src="https://github.com/adrianolaselva/dataql/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://goreportcard.com/report/github.com/adrianolaselva/dataql"><img src="https://goreportcard.com/badge/github.com/adrianolaselva/dataql" alt="Go Report Card"></a>
+  <a href="https://pkg.go.dev/github.com/adrianolaselva/dataql"><img src="https://godoc.org/github.com/adrianolaselva/dataql?status.svg" alt="GoDoc"></a>
+  <img src="https://img.shields.io/github/issues/adrianolaselva/dataql" alt="GitHub issues">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#features">Features</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#llm-integration">LLM Integration</a> •
+  <a href="#documentation">Documentation</a>
+</p>
+
+---
 
 DataQL is a CLI tool developed in Go that allows you to query and manipulate data files using SQL statements.
 It loads data into an SQLite database (in-memory or file-based) enabling powerful SQL operations on your data.
@@ -56,6 +75,31 @@ dataql run -f sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY regi
 - **LLM-Native**: Built-in MCP server for Claude, Codex, Gemini. Skills for Claude Code.
 - **Zero Setup**: Single binary, no dependencies, no configuration files.
 - **Familiar Syntax**: If you know SQL, you know DataQL.
+
+## Quick Start
+
+```bash
+# Install DataQL
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash
+
+# Query a CSV file
+dataql run -f data.csv -q "SELECT * FROM data WHERE amount > 100"
+
+# Query JSON from a URL
+dataql run -f "https://api.example.com/data.json" -q "SELECT name, value FROM data"
+
+# Query data from S3
+dataql run -f "s3://bucket/data.parquet" -q "SELECT * FROM data LIMIT 10"
+
+# Export results to JSON
+dataql run -f data.csv -q "SELECT * FROM data" -e output.json -t json
+
+# Interactive REPL mode
+dataql run -f data.csv
+# dataql> SELECT COUNT(*) FROM data;
+# dataql> .tables
+# dataql> .exit
+```
 
 ## Features
 

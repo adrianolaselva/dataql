@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="img/dataql.jpg" alt="DataQL Logo" width="250">
+</p>
+
 # LLM Integration Guide
 
 DataQL enables Large Language Models (LLMs) to efficiently query and transform data without loading entire files into context, dramatically reducing token consumption.

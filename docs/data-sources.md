@@ -264,6 +264,80 @@ export AZURE_STORAGE_SAS_TOKEN="?sv=2021-06-08&ss=b&srt=co&sp=rl..."
 dataql run -f "az://mycontainer/data.csv" -q "SELECT * FROM data"
 ```
 
+## Amazon DynamoDB
+
+Query data from DynamoDB tables.
+
+### Configuration
+
+Set AWS credentials via environment variables:
+
+```bash
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_REGION="us-east-1"
+```
+
+Or use AWS CLI configuration:
+
+```bash
+aws configure
+```
+
+### URL Format
+
+```bash
+# Basic format: region/table-name
+dynamodb://us-east-1/my-table
+
+# With custom endpoint (LocalStack, local DynamoDB)
+dynamodb://us-east-1/my-table?endpoint=http://localhost:8000
+```
+
+### Usage Examples
+
+```bash
+# Query DynamoDB table
+dataql run -f "dynamodb://us-east-1/users" \
+  -q "SELECT name, email FROM users WHERE age > 30"
+
+# Export to CSV
+dataql run -f "dynamodb://us-east-1/orders" \
+  -q "SELECT * FROM orders" \
+  -e output.csv -t csv
+
+# With LocalStack endpoint
+dataql run -f "dynamodb://us-east-1/test-table?endpoint=http://localhost:4566" \
+  -q "SELECT * FROM test_table"
+
+# Custom table name
+dataql run -f "dynamodb://us-east-1/my-data-table" -c my_table \
+  -q "SELECT * FROM my_table"
+```
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `AWS_ACCESS_KEY_ID` | AWS access key ID |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret access key |
+| `AWS_REGION` | AWS region (e.g., `us-east-1`) |
+| `AWS_ENDPOINT_URL` | Custom endpoint URL (for LocalStack) |
+| `AWS_ENDPOINT_URL_DYNAMODB` | DynamoDB-specific custom endpoint |
+
+### How It Works
+
+1. DataQL scans the DynamoDB table using the AWS SDK
+2. The schema is inferred from the first item in the table
+3. Data is loaded into an in-memory SQLite database
+4. You can then query the data using standard SQL syntax
+
+### Limitations
+
+- DynamoDB-specific query operations (KeyConditions, FilterExpressions) are not supported
+- All data is loaded into memory (use `--lines` to limit rows)
+- Schema is inferred from the first item; tables with inconsistent schemas may have missing columns
+
 ## Message Queues
 
 Query messages from message queues without consuming/deleting them. Perfect for troubleshooting and debugging.

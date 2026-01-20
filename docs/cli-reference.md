@@ -103,6 +103,10 @@ dataql run -f "duckdb:///path/to/database.db?table=data"
 
 # MongoDB
 dataql run -f "mongodb://user:pass@host:27017/database?collection=documents"
+
+# DynamoDB
+dataql run -f "dynamodb://us-east-1/table-name"
+dataql run -f "dynamodb://us-east-1/table-name?endpoint=http://localhost:4566"
 ```
 
 ## Supported File Formats
@@ -369,6 +373,7 @@ SELECT CAST(id AS TEXT) FROM data;
 | `AWS_ENDPOINT_URL` | Custom endpoint (for LocalStack, MinIO) |
 | `AWS_ENDPOINT_URL_S3` | S3-specific custom endpoint |
 | `AWS_ENDPOINT_URL_SQS` | SQS-specific custom endpoint |
+| `AWS_ENDPOINT_URL_DYNAMODB` | DynamoDB-specific custom endpoint |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to GCP service account JSON |
 | `AZURE_STORAGE_ACCOUNT` | Azure storage account name |
 | `AZURE_STORAGE_KEY` | Azure storage account key |

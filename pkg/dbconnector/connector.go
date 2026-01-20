@@ -13,6 +13,7 @@ const (
 	DBTypeMySQL    DBType = "mysql"
 	DBTypeDuckDB   DBType = "duckdb"
 	DBTypeMongoDB  DBType = "mongodb"
+	DBTypeDynamoDB DBType = "dynamodb"
 )
 
 // Connector interface for database operations

@@ -108,6 +108,7 @@ print_test_plan() {
     echo "  • Kafka      - Message queue reading"
     echo "  • S3         - Object storage (LocalStack)"
     echo "  • SQS        - Message queue (LocalStack)"
+    echo "  • DynamoDB   - NoSQL database (LocalStack)"
     clear_line
 }
 
@@ -155,6 +156,7 @@ run_test_suite "Kafka" "$SCRIPT_DIR/test-kafka.sh" || true
 # AWS services (LocalStack)
 run_test_suite "S3" "$SCRIPT_DIR/test-s3.sh" || true
 run_test_suite "SQS" "$SCRIPT_DIR/test-sqs.sh" || true
+run_test_suite "DynamoDB" "$SCRIPT_DIR/test-dynamodb.sh" || true
 
 # Print summary
 print_summary

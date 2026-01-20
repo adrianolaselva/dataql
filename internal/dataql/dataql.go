@@ -21,6 +21,7 @@ import (
 	excelHandler "github.com/adrianolaselva/dataql/pkg/filehandler/excel"
 	jsonHandler "github.com/adrianolaselva/dataql/pkg/filehandler/json"
 	jsonlHandler "github.com/adrianolaselva/dataql/pkg/filehandler/jsonl"
+	dynamodbHandler "github.com/adrianolaselva/dataql/pkg/filehandler/dynamodb"
 	mongodbHandler "github.com/adrianolaselva/dataql/pkg/filehandler/mongodb"
 	mqHandler "github.com/adrianolaselva/dataql/pkg/filehandler/mq"
 	orcHandler "github.com/adrianolaselva/dataql/pkg/filehandler/orc"
@@ -253,6 +254,16 @@ func createFileHandler(params Params, bar *progressbar.ProgressBar, storage stor
 			return nil, fmt.Errorf("failed to parse MongoDB URL: %w", err)
 		}
 		return mongodbHandler.NewMongoHandler(*connInfo, bar, storage, params.Lines, params.Collection), nil
+
+	case filehandler.FormatDynamoDB:
+		if len(params.FileInputs) != 1 {
+			return nil, fmt.Errorf("DynamoDB URL must be a single connection string")
+		}
+		connInfo, err := dynamodbHandler.ParseDynamoDBURL(params.FileInputs[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse DynamoDB URL: %w", err)
+		}
+		return dynamodbHandler.NewDynamoDBHandler(*connInfo, bar, storage, params.Lines, params.Collection), nil
 
 	case filehandler.FormatSQLite:
 		return sqliteHandler.NewSqliteHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil

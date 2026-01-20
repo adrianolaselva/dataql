@@ -27,6 +27,7 @@ const (
 	FormatMySQL    Format = "mysql"
 	FormatDuckDB   Format = "duckdb"
 	FormatMongoDB  Format = "mongodb"
+	FormatDynamoDB Format = "dynamodb"
 	FormatSQLite   Format = "sqlite"
 	FormatMQ       Format = "mq" // Message Queue (SQS, Kafka, RabbitMQ, etc.)
 )
@@ -65,6 +66,9 @@ func DetectFormat(filePath string) (Format, error) {
 	}
 	if strings.HasPrefix(filePath, "mongodb://") || strings.HasPrefix(filePath, "mongodb+srv://") {
 		return FormatMongoDB, nil
+	}
+	if strings.HasPrefix(filePath, "dynamodb://") {
+		return FormatDynamoDB, nil
 	}
 	// Check for message queue URLs
 	if IsMQURL(filePath) {

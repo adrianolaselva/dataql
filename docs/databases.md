@@ -10,6 +10,7 @@ DataQL can connect to various databases and query their data using SQL.
 | MySQL | `mysql://` | Relational database |
 | DuckDB | `duckdb://` | Analytical database |
 | MongoDB | `mongodb://` | Document database |
+| DynamoDB | `dynamodb://` | NoSQL key-value database (AWS) |
 
 ## PostgreSQL
 
@@ -336,6 +337,146 @@ dataql run \
   -f "mongodb+srv://user:pass@cluster.mongodb.net/mydb?collection=users" \
   -q "SELECT * FROM users"
 ```
+
+## DynamoDB
+
+Connect to Amazon DynamoDB tables.
+
+### Connection URL Format
+
+```
+dynamodb://region/table-name
+dynamodb://region/table-name?endpoint=http://localhost:8000
+```
+
+### Configuration
+
+**Using AWS Credentials:**
+
+```bash
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_REGION="us-east-1"
+
+dataql run \
+  -f "dynamodb://us-east-1/users" \
+  -q "SELECT * FROM users WHERE age > 30"
+```
+
+**Using AWS CLI Profile:**
+
+```bash
+aws configure
+dataql run -f "dynamodb://us-east-1/orders" -q "SELECT * FROM orders"
+```
+
+### Connection Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `region` | AWS region (in URL host) | Required |
+| `table-name` | DynamoDB table name (in URL path) | Required |
+| `endpoint` | Custom endpoint URL | AWS default |
+
+### URL Query Parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `endpoint` | Custom endpoint for LocalStack/local DynamoDB | `?endpoint=http://localhost:8000` |
+
+### Examples
+
+```bash
+# Basic query
+dataql run \
+  -f "dynamodb://us-east-1/products" \
+  -q "SELECT name, price FROM products WHERE price > 100"
+
+# With LocalStack endpoint
+dataql run \
+  -f "dynamodb://us-east-1/test-table?endpoint=http://localhost:4566" \
+  -q "SELECT * FROM test_table"
+
+# Export to CSV
+dataql run \
+  -f "dynamodb://us-west-2/orders" \
+  -q "SELECT order_id, customer_id, total FROM orders" \
+  -e orders.csv -t csv
+
+# Custom table name in SQLite
+dataql run \
+  -f "dynamodb://us-east-1/my-data-table" -c my_table \
+  -q "SELECT * FROM my_table LIMIT 100"
+
+# Aggregations
+dataql run \
+  -f "dynamodb://us-east-1/sales" \
+  -q "SELECT category, SUM(amount) as total FROM sales GROUP BY category ORDER BY total DESC"
+```
+
+### Schema Inference
+
+DynamoDB is schemaless, so DataQL infers the schema from the first item:
+
+**Original DynamoDB Item:**
+```json
+{
+  "id": {"S": "1"},
+  "name": {"S": "John"},
+  "age": {"N": "30"},
+  "active": {"BOOL": true}
+}
+```
+
+**Flattened Columns:**
+- `id` (TEXT)
+- `name` (TEXT)
+- `age` (TEXT)
+- `active` (TEXT)
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `AWS_ACCESS_KEY_ID` | AWS access key ID |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret access key |
+| `AWS_SESSION_TOKEN` | Session token (for temporary credentials) |
+| `AWS_REGION` | Default AWS region |
+| `AWS_ENDPOINT_URL` | Custom endpoint (for LocalStack) |
+| `AWS_ENDPOINT_URL_DYNAMODB` | DynamoDB-specific endpoint |
+
+### LocalStack Integration
+
+For local development and testing:
+
+```bash
+# Start LocalStack
+docker run -d -p 4566:4566 localstack/localstack
+
+# Set environment
+export AWS_ACCESS_KEY_ID=test
+export AWS_SECRET_ACCESS_KEY=test
+export AWS_ENDPOINT_URL=http://localhost:4566
+
+# Create table
+aws --endpoint-url=$AWS_ENDPOINT_URL dynamodb create-table \
+  --table-name users \
+  --attribute-definitions AttributeName=id,AttributeType=S \
+  --key-schema AttributeName=id,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST
+
+# Query with DataQL
+dataql run \
+  -f "dynamodb://us-east-1/users?endpoint=http://localhost:4566" \
+  -q "SELECT * FROM users"
+```
+
+### Limitations
+
+1. **No native DynamoDB queries**: DataQL scans the table and loads data into SQLite
+2. **Memory usage**: Large tables are fully loaded into memory
+3. **Consistent schema**: Tables with varying item structures may have missing columns
+4. **Read-only**: DataQL only reads data, doesn't write to DynamoDB
 
 ## Security Best Practices
 

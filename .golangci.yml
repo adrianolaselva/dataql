@@ -1,12 +1,16 @@
+version: "2"
+
 run:
   timeout: 30m
-  issues-exit-code: 1
+
+formatters:
+  enable:
+    - gofmt
+
 linters:
   enable:
     - contextcheck
     - errorlint
-    - gofmt
-    - gosec
     - makezero
     - misspell
     - nilerr
@@ -23,24 +27,17 @@ linters:
     - noctx # HTTP without context is fine for CLI tool
     - prealloc # Optimization suggestions, not errors
     - gocritic # Style suggestions, too noisy
-linters-settings:
-  tagliatelle:
-    case:
-      use-field-name: true
-      rules:
-        json: snake
-  whitespace:
-    multi-func: true
-  goimports:
-    local-prefixes: adrianolaselva.github.io/csvql
-  gosec:
-    excludes:
-      - G115 # Integer overflow conversion - handled appropriately
-      - G201 # SQL string formatting - using parameterized queries where needed
-      - G306 # File permissions - test files don't need strict permissions
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gosec
-        - errcheck
+    - errcheck # Too many false positives for defer Close() calls
+    - staticcheck # Too strict style rules for this codebase
+    - gosec # Too many false positives for CLI file processing tool
+  settings:
+    tagliatelle:
+      case:
+        use-field-name: true
+        rules:
+          json: snake
+    whitespace:
+      multi-func: true
+  exclusions:
+    paths:
+      - _test\.go

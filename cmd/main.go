@@ -2,12 +2,18 @@ package cmd
 
 import (
 	"fmt"
-	"syscall"
 
 	"github.com/adrianolaselva/dataql/cmd/dataqlctl"
 	"github.com/adrianolaselva/dataql/cmd/mcpctl"
 	"github.com/adrianolaselva/dataql/cmd/skillsctl"
 	"github.com/spf13/cobra"
+)
+
+// Build information - set via ldflags during build
+var (
+	Version   = "dev"
+	Commit    = "unknown"
+	BuildDate = "unknown"
 )
 
 const (
@@ -24,14 +30,14 @@ type cliBase struct {
 }
 
 func New() CliBase {
-	var release = "latest"
-	if value, ok := syscall.Getenv("VERSION"); ok {
-		release = value
+	versionInfo := Version
+	if Commit != "unknown" {
+		versionInfo = fmt.Sprintf("%s (commit: %s, built: %s)", Version, Commit, BuildDate)
 	}
 
 	cmd := &cobra.Command{
 		Use:     commandBase,
-		Version: release,
+		Version: versionInfo,
 		Long:    bannerPrint,
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd:   false,

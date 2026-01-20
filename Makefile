@@ -4,6 +4,17 @@ VERSION=latest
 INSTALL_DIR=/usr/local/bin
 LOCAL_INSTALL_DIR=$(HOME)/.local/bin
 
+# Version info from git
+GIT_VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Ldflags for version injection
+LDFLAGS := -s -w \
+	-X github.com/adrianolaselva/dataql/cmd.Version=$(GIT_VERSION) \
+	-X github.com/adrianolaselva/dataql/cmd.Commit=$(GIT_COMMIT) \
+	-X github.com/adrianolaselva/dataql/cmd.BuildDate=$(BUILD_DATE)
+
 ifndef release
 override release = $(VERSION)
 endif
@@ -11,7 +22,7 @@ endif
 .PHONY: all build test lint run tidy mod-download deps clean coverage \
         build-linux build-linux-arm64 build-darwin build-darwin-arm64 build-windows \
         build-all install install-local uninstall release-dry-run docker-build \
-        verify verify-binary \
+        verify verify-binary fmt fmt-check hooks hooks-remove check \
         e2e-up e2e-down e2e-logs e2e-status e2e-clean e2e-test e2e-wait e2e-reset \
         e2e-test-scripts e2e-test-postgres e2e-test-mysql e2e-test-mongodb \
         e2e-test-kafka e2e-test-s3 e2e-test-sqs
@@ -20,7 +31,7 @@ all:
 	git rev-parse HEAD
 
 build:
-	go build -a -ldflags="-s -w" -o $(PROJECT_NAME) -v ./main.go
+	go build -a -ldflags="$(LDFLAGS)" -o $(PROJECT_NAME) -v ./main.go
 
 test:
 	go test -v -race -count=1 -short ./...
@@ -37,6 +48,34 @@ lint-out:
 	@mkdir -p .tmp
 	golangci-lint run --out-format checkstyle > .tmp/lint.out
 
+# Format code with gofmt
+fmt:
+	@echo "Formatting code..."
+	@gofmt -s -w .
+	@echo "✓ Code formatted"
+
+# Check code formatting (no changes)
+fmt-check:
+	@echo "Checking code formatting..."
+	@test -z "$$(gofmt -l . | grep -v vendor/ | grep -v '.git/')" || (echo "Run 'make fmt' to fix" && gofmt -l . | grep -v vendor/ | grep -v '.git/' && exit 1)
+	@echo "✓ Code is properly formatted"
+
+# Install git hooks
+hooks:
+	@echo "Installing git hooks..."
+	@cp scripts/pre-commit .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@echo "✓ Pre-commit hook installed"
+
+# Remove git hooks
+hooks-remove:
+	@rm -f .git/hooks/pre-commit
+	@echo "✓ Pre-commit hook removed"
+
+# Run all checks (fmt + lint)
+check: fmt-check lint
+	@echo "✓ All checks passed"
+
 run:
 	go run ./main.go
 
@@ -51,19 +90,19 @@ deps:
 
 # Platform-specific builds
 build-linux:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags="-s -w" -o dist/$(PROJECT_NAME)_linux_amd64 -v ./main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags="$(LDFLAGS)" -o dist/$(PROJECT_NAME)_linux_amd64 -v ./main.go
 
 build-linux-arm64:
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -ldflags="-s -w" -o dist/$(PROJECT_NAME)_linux_arm64 -v ./main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -ldflags="$(LDFLAGS)" -o dist/$(PROJECT_NAME)_linux_arm64 -v ./main.go
 
 build-darwin:
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags="-s -w" -o dist/$(PROJECT_NAME)_darwin_amd64 -v ./main.go
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -ldflags="$(LDFLAGS)" -o dist/$(PROJECT_NAME)_darwin_amd64 -v ./main.go
 
 build-darwin-arm64:
-	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -a -ldflags="-s -w" -o dist/$(PROJECT_NAME)_darwin_arm64 -v ./main.go
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -a -ldflags="$(LDFLAGS)" -o dist/$(PROJECT_NAME)_darwin_arm64 -v ./main.go
 
 build-windows:
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags="-s -w" -o dist/$(PROJECT_NAME)_windows_amd64.exe -v ./main.go
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags="$(LDFLAGS)" -o dist/$(PROJECT_NAME)_windows_amd64.exe -v ./main.go
 
 # Build for all platforms
 build-all: clean

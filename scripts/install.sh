@@ -35,6 +35,8 @@ BOLD='\033[1m'
 VERSION=""
 LOCAL_INSTALL=false
 FORCE=false
+UPGRADE=false
+CLEAN=false
 
 # Global temp directory
 TMP_DIR=""
@@ -173,6 +175,94 @@ check_path() {
     fi
 }
 
+# Extract version number from version string (e.g., "v0.1.0 (commit: abc, built: 2024-01-01)" -> "0.1.0")
+extract_version_number() {
+    local version_string="$1"
+    # Remove 'v' prefix and everything after the version number
+    echo "$version_string" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/' | head -1
+}
+
+# Compare two semantic versions. Returns:
+# 0 if equal, 1 if first > second, 2 if first < second
+compare_versions() {
+    local v1="$1"
+    local v2="$2"
+
+    # Extract just the version numbers
+    v1=$(extract_version_number "$v1")
+    v2=$(extract_version_number "$v2")
+
+    if [ "$v1" = "$v2" ]; then
+        return 0
+    fi
+
+    # Compare using sort -V
+    local smaller
+    smaller=$(printf '%s\n%s' "$v1" "$v2" | sort -V | head -n1)
+
+    if [ "$smaller" = "$v1" ]; then
+        return 2  # v1 < v2
+    else
+        return 1  # v1 > v2
+    fi
+}
+
+# Check for multiple installations and warn user
+check_multiple_installations() {
+    local found=()
+    local versions=()
+
+    if [ -f "${INSTALL_DIR}/${BINARY_NAME}" ]; then
+        local v
+        v=$("${INSTALL_DIR}/${BINARY_NAME}" --version 2>/dev/null | head -1 || echo "unknown")
+        found+=("${INSTALL_DIR}/${BINARY_NAME}")
+        versions+=("$v")
+    fi
+
+    if [ -f "${LOCAL_INSTALL_DIR}/${BINARY_NAME}" ]; then
+        local v
+        v=$("${LOCAL_INSTALL_DIR}/${BINARY_NAME}" --version 2>/dev/null | head -1 || echo "unknown")
+        found+=("${LOCAL_INSTALL_DIR}/${BINARY_NAME}")
+        versions+=("$v")
+    fi
+
+    if [ ${#found[@]} -gt 1 ]; then
+        echo ""
+        warn "Multiple installations detected:"
+        for i in "${!found[@]}"; do
+            echo "  - ${found[$i]}: ${versions[$i]}"
+        done
+        echo ""
+        echo "This may cause confusion. Consider removing duplicates:"
+        echo "  sudo rm ${INSTALL_DIR}/${BINARY_NAME}    # remove system install"
+        echo "  rm ${LOCAL_INSTALL_DIR}/${BINARY_NAME}   # remove local install"
+        echo ""
+        echo "Or use --clean to remove all installations before installing."
+        echo ""
+    fi
+}
+
+# Clean all existing installations
+clean_all_installations() {
+    info "Cleaning all existing installations..."
+
+    if [ -f "${INSTALL_DIR}/${BINARY_NAME}" ]; then
+        info "Removing ${INSTALL_DIR}/${BINARY_NAME}..."
+        if [ -w "${INSTALL_DIR}" ]; then
+            rm -f "${INSTALL_DIR}/${BINARY_NAME}"
+        else
+            sudo rm -f "${INSTALL_DIR}/${BINARY_NAME}"
+        fi
+        success "Removed ${INSTALL_DIR}/${BINARY_NAME}"
+    fi
+
+    if [ -f "${LOCAL_INSTALL_DIR}/${BINARY_NAME}" ]; then
+        info "Removing ${LOCAL_INSTALL_DIR}/${BINARY_NAME}..."
+        rm -f "${LOCAL_INSTALL_DIR}/${BINARY_NAME}"
+        success "Removed ${LOCAL_INSTALL_DIR}/${BINARY_NAME}"
+    fi
+}
+
 # Print usage
 usage() {
     echo "Usage: $0 [OPTIONS]"
@@ -181,12 +271,18 @@ usage() {
     echo "  --version, -v VERSION   Install specific version (e.g., v1.0.0)"
     echo "  --local, -l             Install to ~/.local/bin (no sudo required)"
     echo "  --force, -f             Force reinstall even if already installed"
+    echo "  --upgrade, -u           Upgrade to latest version (only if newer)"
+    echo "  --clean, -c             Remove all existing installations first"
     echo "  --help, -h              Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0                      Install latest version"
-    echo "  $0 --version v1.0.0     Install version v1.0.0"
-    echo "  $0 --local              Install to ~/.local/bin"
+    echo "  $0                      Install latest version (first time)"
+    echo "  $0 --upgrade            Upgrade to latest version if newer"
+    echo "  $0 --force              Force reinstall latest version"
+    echo "  $0 --clean --force      Clean all installations, then install"
+    echo "  $0 --version v1.0.0     Install specific version"
+    echo "  $0 --local              Install to ~/.local/bin (no sudo)"
+    echo "  $0 --local --upgrade    Upgrade local installation"
 }
 
 # Parse arguments
@@ -203,6 +299,14 @@ parse_args() {
                 ;;
             --force|-f)
                 FORCE=true
+                shift
+                ;;
+            --upgrade|-u)
+                UPGRADE=true
+                shift
+                ;;
+            --clean|-c)
+                CLEAN=true
                 shift
                 ;;
             --help|-h)
@@ -225,11 +329,19 @@ main() {
     print_banner
     check_dependencies
 
+    # Check for multiple installations at the start
+    check_multiple_installations
+
     local os arch
     os=$(detect_os)
     arch=$(detect_arch)
 
     info "Detected: ${os}/${arch}"
+
+    # Clean all installations if requested
+    if [ "$CLEAN" = true ]; then
+        clean_all_installations
+    fi
 
     # Get version
     if [ -z "$VERSION" ]; then
@@ -237,7 +349,7 @@ main() {
         VERSION=$(get_latest_version)
     fi
 
-    info "Version: ${VERSION}"
+    info "Target version: ${VERSION}"
 
     # Determine install directory
     local install_dir
@@ -249,12 +361,38 @@ main() {
 
     # Check if already installed
     local existing_binary="${install_dir}/${BINARY_NAME}"
-    if [ -f "$existing_binary" ] && [ "$FORCE" = false ]; then
+    if [ -f "$existing_binary" ]; then
         local existing_version
         existing_version=$("$existing_binary" --version 2>/dev/null | head -1 || echo "unknown")
-        warn "${BINARY_NAME} is already installed: ${existing_version}"
-        echo "Use --force to reinstall"
-        exit 0
+        info "Installed version: ${existing_version}"
+
+        # Handle --upgrade flag
+        if [ "$UPGRADE" = true ]; then
+            local installed_ver target_ver
+            installed_ver=$(extract_version_number "$existing_version")
+            target_ver=$(extract_version_number "$VERSION")
+
+            if compare_versions "$installed_ver" "$target_ver"; then
+                local cmp_result=$?
+                if [ $cmp_result -eq 0 ]; then
+                    success "Already at version ${VERSION}. No upgrade needed."
+                    exit 0
+                elif [ $cmp_result -eq 1 ]; then
+                    warn "Installed version (${installed_ver}) is newer than target (${target_ver})"
+                    echo "Use --force to downgrade"
+                    exit 0
+                fi
+            fi
+            info "Upgrading from ${installed_ver} to ${target_ver}..."
+        elif [ "$FORCE" = false ]; then
+            warn "${BINARY_NAME} is already installed: ${existing_version}"
+            echo ""
+            echo "Options:"
+            echo "  --upgrade  Upgrade to latest version (if newer)"
+            echo "  --force    Force reinstall"
+            echo "  --clean    Remove all installations first"
+            exit 0
+        fi
     fi
 
     # Create temp directory

@@ -55,6 +55,49 @@ make install-local # installs to ~/.local/bin
 dataql --version
 ```
 
+### Updating DataQL
+
+**Upgrade to latest version:**
+
+```bash
+# Linux/macOS - Only upgrades if a newer version is available
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --upgrade
+
+# Force reinstall (even if same version)
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --force
+```
+
+**Clean install (remove all versions first):**
+
+```bash
+# Remove all existing installations and install fresh
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --clean --force
+```
+
+### Uninstalling DataQL
+
+**Linux / macOS:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/uninstall.sh | bash
+```
+
+**Windows (PowerShell):**
+
+```powershell
+irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/uninstall.ps1 | iex
+```
+
+**Manual uninstall:**
+
+```bash
+# Remove system installation
+sudo rm /usr/local/bin/dataql
+
+# Remove user installation
+rm ~/.local/bin/dataql
+```
+
 ## Hello World Examples
 
 ### Example 1: Query a CSV File

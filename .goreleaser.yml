@@ -29,7 +29,7 @@ builds:
       - -extldflags "-static"
       - -X github.com/adrianolaselva/dataql/cmd.Version={{.Version}}
       - -X github.com/adrianolaselva/dataql/cmd.Commit={{.ShortCommit}}
-      - -X github.com/adrianolaselva/dataql/cmd.Date={{.Date}}
+      - -X github.com/adrianolaselva/dataql/cmd.BuildDate={{.Date}}
 
 archives:
   - id: default

@@ -180,6 +180,21 @@ make install-local # installs to ~/.local/bin
 dataql --version
 ```
 
+### Update
+
+**Upgrade to latest version:**
+
+```bash
+# Linux/macOS - Only upgrades if a newer version is available
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --upgrade
+
+# Force reinstall (same or different version)
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --force
+
+# Clean install (remove all versions first, then install)
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --clean --force
+```
+
 ### Uninstall
 
 **Linux / macOS:**

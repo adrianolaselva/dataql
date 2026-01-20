@@ -48,6 +48,9 @@ const (
 	defaultPageSize    = 25
 )
 
+// Version is set by the main package during initialization
+var Version = "dev"
+
 // DataQL is the main interface for the data query engine
 type DataQL interface {
 	Run() error
@@ -508,7 +511,7 @@ func (d *dataQL) handleREPLCommand(line string) (bool, error) {
 		return true, nil
 
 	case ".version":
-		fmt.Println("dataql version 1.0.0")
+		fmt.Printf("dataql version %s\n", Version)
 		return true, nil
 
 	case ".pagesize":

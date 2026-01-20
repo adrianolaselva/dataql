@@ -25,7 +25,7 @@ endif
         verify verify-binary fmt fmt-check hooks hooks-remove check \
         e2e-up e2e-down e2e-logs e2e-status e2e-clean e2e-test e2e-wait e2e-reset \
         e2e-test-scripts e2e-test-postgres e2e-test-mysql e2e-test-mongodb \
-        e2e-test-kafka e2e-test-s3 e2e-test-sqs
+        e2e-test-kafka e2e-test-s3 e2e-test-sqs e2e-test-install
 
 all:
 	git rev-parse HEAD
@@ -295,6 +295,12 @@ e2e-test-sqs: build
 	@chmod +x $(E2E_DIR)/tests/test-sqs.sh
 	@set -a && source $(E2E_ENV_FILE) && set +a && \
 		DATAQL_BIN=$(PWD)/$(PROJECT_NAME) $(E2E_DIR)/tests/test-sqs.sh
+
+# Installation e2e tests (no external services required)
+e2e-test-install: build
+	@echo "Running installation E2E tests..."
+	@chmod +x $(E2E_DIR)/tests/test-install.sh
+	@DATAQL_BIN=$(PWD)/$(PROJECT_NAME) $(E2E_DIR)/tests/test-install.sh
 
 # Shell access to containers
 e2e-shell-postgres:

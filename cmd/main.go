@@ -6,6 +6,7 @@ import (
 	"github.com/adrianolaselva/dataql/cmd/dataqlctl"
 	"github.com/adrianolaselva/dataql/cmd/mcpctl"
 	"github.com/adrianolaselva/dataql/cmd/skillsctl"
+	"github.com/adrianolaselva/dataql/internal/dataql"
 	"github.com/spf13/cobra"
 )
 
@@ -30,6 +31,9 @@ type cliBase struct {
 }
 
 func New() CliBase {
+	// Propagate version to internal packages for REPL .version command
+	dataql.Version = Version
+
 	versionInfo := Version
 	if Commit != "unknown" {
 		versionInfo = fmt.Sprintf("%s (commit: %s, built: %s)", Version, Commit, BuildDate)

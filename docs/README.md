@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="img/dataql.jpg" alt="DataQL Logo" width="350">
+  <img src="img/dataql.png" alt="DataQL Logo" width="350">
 </p>
 
 <h1 align="center">DataQL Documentation</h1>

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/img/dataql.jpg" alt="DataQL Logo" width="400">
+  <img src="docs/img/dataql.png" alt="DataQL Logo" width="400">
 </p>
 
 <h1 align="center">DataQL</h1>
@@ -186,21 +186,25 @@ irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install
 
 **Specific version:**
 
+Linux / macOS:
 ```bash
-# Linux/macOS
 curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --version v1.0.0
+```
 
-# Windows
+Windows (PowerShell):
+```powershell
 $env:DATAQL_VERSION="v1.0.0"; irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
 ```
 
 **User installation (no sudo/admin required):**
 
+Linux / macOS:
 ```bash
-# Linux/macOS
 curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --local
+```
 
-# Windows
+Windows (PowerShell):
+```powershell
 $env:DATAQL_USER_INSTALL="true"; irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
 ```
 
@@ -228,8 +232,9 @@ dataql --version
 
 **Upgrade to latest version:**
 
+Linux / macOS:
 ```bash
-# Linux/macOS - Only upgrades if a newer version is available
+# Only upgrades if a newer version is available
 curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --upgrade
 
 # Force reinstall (same or different version)
@@ -237,6 +242,12 @@ curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/
 
 # Clean install (remove all versions first, then install)
 curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --clean --force
+```
+
+Windows (PowerShell):
+```powershell
+# Force reinstall
+$env:DATAQL_FORCE="true"; irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
 ```
 
 ### Uninstall

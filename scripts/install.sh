@@ -366,25 +366,40 @@ main() {
         existing_version=$("$existing_binary" --version 2>/dev/null | head -1 || echo "unknown")
         info "Installed version: ${existing_version}"
 
+        local installed_ver target_ver
+        installed_ver=$(extract_version_number "$existing_version")
+        target_ver=$(extract_version_number "$VERSION")
+
+        # Compare versions
+        compare_versions "$installed_ver" "$target_ver"
+        local cmp_result=$?
+
         # Handle --upgrade flag
         if [ "$UPGRADE" = true ]; then
-            local installed_ver target_ver
-            installed_ver=$(extract_version_number "$existing_version")
-            target_ver=$(extract_version_number "$VERSION")
-
-            if compare_versions "$installed_ver" "$target_ver"; then
-                local cmp_result=$?
-                if [ $cmp_result -eq 0 ]; then
+            if [ $cmp_result -eq 0 ]; then
+                # Same version
+                if [ "$FORCE" = true ]; then
+                    info "Reinstalling same version ${VERSION} (--force specified)..."
+                else
                     success "Already at version ${VERSION}. No upgrade needed."
                     exit 0
-                elif [ $cmp_result -eq 1 ]; then
+                fi
+            elif [ $cmp_result -eq 1 ]; then
+                # Installed is newer than target (downgrade)
+                if [ "$FORCE" = true ]; then
+                    warn "Downgrading from ${installed_ver} to ${target_ver} (--force specified)..."
+                else
                     warn "Installed version (${installed_ver}) is newer than target (${target_ver})"
                     echo "Use --force to downgrade"
                     exit 0
                 fi
+            else
+                # Target is newer (upgrade)
+                info "Upgrading from ${installed_ver} to ${target_ver}..."
             fi
-            info "Upgrading from ${installed_ver} to ${target_ver}..."
-        elif [ "$FORCE" = false ]; then
+        elif [ "$FORCE" = true ]; then
+            info "Force reinstalling ${VERSION}..."
+        else
             warn "${BINARY_NAME} is already installed: ${existing_version}"
             echo ""
             echo "Options:"
@@ -467,12 +482,27 @@ main() {
         sudo chmod +x "$dest"
     fi
 
-    success "Installed successfully!"
-
     # Verify installation
     if [ -x "${dest}" ]; then
         local installed_version
-        installed_version=$("${dest}" --version 2>/dev/null | head -1 || echo "$VERSION")
+        installed_version=$("${dest}" --version 2>/dev/null | head -1)
+
+        if [ -z "$installed_version" ]; then
+            die "Binary installed but --version command failed. Installation may be corrupted."
+        fi
+
+        # Verify the installed version matches expected
+        local installed_ver_num target_ver_num
+        installed_ver_num=$(extract_version_number "$installed_version")
+        target_ver_num=$(extract_version_number "$VERSION")
+
+        if [ "$installed_ver_num" != "$target_ver_num" ]; then
+            warn "Version mismatch: expected ${target_ver_num}, got ${installed_ver_num}"
+            warn "You may have another installation in your PATH taking precedence."
+        fi
+
+        # Clear shell hash table to ensure new binary is found
+        hash -r 2>/dev/null || true
 
         echo ""
         success "${BINARY_NAME} ${installed_version} installed successfully!"
@@ -483,8 +513,10 @@ main() {
         echo "Get started:"
         echo "  ${BINARY_NAME} --help"
         echo "  ${BINARY_NAME} run -f data.csv -q \"SELECT * FROM data\""
+        echo ""
+        echo "Note: If you see an old version, restart your shell or run: hash -r"
     else
-        die "Installation verification failed"
+        die "Installation verification failed - binary not executable at ${dest}"
     fi
 }
 

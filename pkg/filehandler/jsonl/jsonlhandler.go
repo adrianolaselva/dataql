@@ -118,6 +118,9 @@ func (j *jsonlHandler) loadFile(filePath string) error {
 	buf := make([]byte, maxScanTokenSize)
 	scanner.Buffer(buf, maxScanTokenSize)
 
+	// Check if storage supports type coercion
+	typedStorage, hasTypedStorage := j.storage.(storage.TypedStorage)
+
 	lineNum := 0
 	for scanner.Scan() {
 		if j.limitLines > 0 && j.currentLine >= j.limitLines {
@@ -143,8 +146,10 @@ func (j *jsonlHandler) loadFile(filePath string) error {
 			if val, ok := flat[col]; ok && val != "" {
 				values[idx] = val
 			} else {
-				// For numeric columns, use nil instead of empty string
-				if columnDefs[idx].Type == storage.TypeBigInt || columnDefs[idx].Type == storage.TypeDouble {
+				// For numeric/boolean columns, use nil instead of empty string
+				if columnDefs[idx].Type == storage.TypeBigInt ||
+					columnDefs[idx].Type == storage.TypeDouble ||
+					columnDefs[idx].Type == storage.TypeBoolean {
 					values[idx] = nil
 				} else {
 					values[idx] = ""
@@ -152,8 +157,14 @@ func (j *jsonlHandler) loadFile(filePath string) error {
 			}
 		}
 
-		if err := j.storage.InsertRow(tableName, columns, values); err != nil {
-			return fmt.Errorf("failed to insert row %d: %w", lineNum, err)
+		var insertErr error
+		if hasTypedStorage {
+			insertErr = typedStorage.InsertRowWithCoercion(tableName, columns, values, columnDefs)
+		} else {
+			insertErr = j.storage.InsertRow(tableName, columns, values)
+		}
+		if insertErr != nil {
+			return fmt.Errorf("failed to insert row %d: %w", lineNum, insertErr)
 		}
 
 		_ = j.bar.Add(1)

@@ -157,6 +157,9 @@ func (y *yamlHandler) importFile(filePath string) error {
 		}
 	}
 
+	// Check if storage supports type coercion
+	typedStorage, hasTypedStorage := y.storage.(storage.TypedStorage)
+
 	// Insert records
 	for i, record := range records {
 		if y.limitLines > 0 && i >= y.limitLines {
@@ -169,8 +172,10 @@ func (y *yamlHandler) importFile(filePath string) error {
 			if val, ok := flatRecord[col]; ok && val != "" {
 				values[j] = val
 			} else {
-				// For numeric columns, use nil instead of empty string
-				if columnDefs[j].Type == storage.TypeBigInt || columnDefs[j].Type == storage.TypeDouble {
+				// For numeric/boolean columns, use nil instead of empty string
+				if columnDefs[j].Type == storage.TypeBigInt ||
+					columnDefs[j].Type == storage.TypeDouble ||
+					columnDefs[j].Type == storage.TypeBoolean {
 					values[j] = nil
 				} else {
 					values[j] = ""
@@ -178,8 +183,14 @@ func (y *yamlHandler) importFile(filePath string) error {
 			}
 		}
 
-		if err := y.storage.InsertRow(collectionName, columns, values); err != nil {
-			return fmt.Errorf("failed to insert row: %w", err)
+		var insertErr error
+		if hasTypedStorage {
+			insertErr = typedStorage.InsertRowWithCoercion(collectionName, columns, values, columnDefs)
+		} else {
+			insertErr = y.storage.InsertRow(collectionName, columns, values)
+		}
+		if insertErr != nil {
+			return fmt.Errorf("failed to insert row: %w", insertErr)
 		}
 
 		y.totalLines++

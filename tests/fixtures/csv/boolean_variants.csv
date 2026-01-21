@@ -1,0 +1,4 @@
+id,bool_lower,bool_upper,bool_yes_no,bool_numeric
+1,true,TRUE,yes,1
+2,false,FALSE,no,0
+3,invalid,INVALID,maybe,2

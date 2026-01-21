@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -36,6 +37,7 @@ type Storage interface {
 type TypedStorage interface {
 	Storage
 	BuildStructureWithTypes(tableName string, columns []ColumnDef) error
+	InsertRowWithCoercion(tableName string, columns []string, values []any, columnDefs []ColumnDef) error
 }
 
 // InferType detects the most appropriate data type for a value
@@ -171,4 +173,177 @@ func InferColumnTypes(columns []string, sampleRows [][]any) []ColumnDef {
 	}
 
 	return result
+}
+
+// TryConvertValue attempts to convert a value to the expected type
+// Returns (convertedValue, success). If conversion fails, returns (nil, false)
+func TryConvertValue(value any, expectedType DataType) (any, bool) {
+	if value == nil {
+		return nil, true
+	}
+
+	// Handle empty strings as NULL for numeric/boolean types
+	if str, ok := value.(string); ok && strings.TrimSpace(str) == "" {
+		if expectedType == TypeBigInt || expectedType == TypeDouble || expectedType == TypeBoolean {
+			return nil, true
+		}
+		return str, true
+	}
+
+	switch expectedType {
+	case TypeBigInt:
+		return tryConvertToBigInt(value)
+	case TypeDouble:
+		return tryConvertToDouble(value)
+	case TypeBoolean:
+		return tryConvertToBoolean(value)
+	default:
+		// VARCHAR - convert anything to string
+		return fmt.Sprintf("%v", value), true
+	}
+}
+
+// tryConvertToBigInt attempts to convert a value to int64
+func tryConvertToBigInt(value any) (any, bool) {
+	switch v := value.(type) {
+	case int:
+		return int64(v), true
+	case int8:
+		return int64(v), true
+	case int16:
+		return int64(v), true
+	case int32:
+		return int64(v), true
+	case int64:
+		return v, true
+	case uint:
+		return int64(v), true
+	case uint8:
+		return int64(v), true
+	case uint16:
+		return int64(v), true
+	case uint32:
+		return int64(v), true
+	case uint64:
+		if v <= ^uint64(0)>>1 { // Check if fits in int64
+			return int64(v), true
+		}
+		return nil, false
+	case float32:
+		return int64(v), true
+	case float64:
+		return int64(v), true
+	case string:
+		s := strings.TrimSpace(v)
+		// Try parsing as integer first
+		if i, err := strconv.ParseInt(s, 10, 64); err == nil {
+			return i, true
+		}
+		// Try parsing as float and truncate
+		if f, err := strconv.ParseFloat(s, 64); err == nil {
+			return int64(f), true
+		}
+		return nil, false
+	case bool:
+		if v {
+			return int64(1), true
+		}
+		return int64(0), true
+	}
+	return nil, false
+}
+
+// tryConvertToDouble attempts to convert a value to float64
+func tryConvertToDouble(value any) (any, bool) {
+	switch v := value.(type) {
+	case float32:
+		return float64(v), true
+	case float64:
+		return v, true
+	case int:
+		return float64(v), true
+	case int8:
+		return float64(v), true
+	case int16:
+		return float64(v), true
+	case int32:
+		return float64(v), true
+	case int64:
+		return float64(v), true
+	case uint:
+		return float64(v), true
+	case uint8:
+		return float64(v), true
+	case uint16:
+		return float64(v), true
+	case uint32:
+		return float64(v), true
+	case uint64:
+		return float64(v), true
+	case string:
+		s := strings.TrimSpace(v)
+		if f, err := strconv.ParseFloat(s, 64); err == nil {
+			return f, true
+		}
+		return nil, false
+	case bool:
+		if v {
+			return float64(1), true
+		}
+		return float64(0), true
+	}
+	return nil, false
+}
+
+// tryConvertToBoolean attempts to convert a value to bool
+func tryConvertToBoolean(value any) (any, bool) {
+	switch v := value.(type) {
+	case bool:
+		return v, true
+	case string:
+		s := strings.TrimSpace(strings.ToLower(v))
+		switch s {
+		case "true", "1", "yes", "on", "t", "y":
+			return true, true
+		case "false", "0", "no", "off", "f", "n":
+			return false, true
+		}
+		return nil, false
+	case int, int8, int16, int32, int64:
+		// Use type assertion to get int64 value
+		var i int64
+		switch val := v.(type) {
+		case int:
+			i = int64(val)
+		case int8:
+			i = int64(val)
+		case int16:
+			i = int64(val)
+		case int32:
+			i = int64(val)
+		case int64:
+			i = val
+		}
+		return i != 0, true
+	case uint, uint8, uint16, uint32, uint64:
+		var u uint64
+		switch val := v.(type) {
+		case uint:
+			u = uint64(val)
+		case uint8:
+			u = uint64(val)
+		case uint16:
+			u = uint64(val)
+		case uint32:
+			u = uint64(val)
+		case uint64:
+			u = val
+		}
+		return u != 0, true
+	case float32:
+		return v != 0, true
+	case float64:
+		return v != 0, true
+	}
+	return nil, false
 }

@@ -249,6 +249,9 @@ func (c *csvHandler) loadDataFromFile(tableName string, file *os.File) error {
 		}
 	}
 
+	// Check if storage supports type coercion
+	typedStorage, hasTypedStorage := c.storage.(storage.TypedStorage)
+
 	// Insert the sample rows we already read
 	c.currentLine = 0
 	for _, record := range allRecords {
@@ -257,8 +260,16 @@ func (c *csvHandler) loadDataFromFile(tableName string, file *os.File) error {
 		}
 		_ = c.bar.Add(1)
 		c.currentLine++
-		if err := c.storage.InsertRow(tableName, columns, c.convertToAnyArrayWithTypes(record, columnDefs)); err != nil {
-			return fmt.Errorf("failed to process row number %d: %w", c.currentLine, err)
+
+		values := c.convertToAnyArrayWithTypes(record, columnDefs)
+		var insertErr error
+		if hasTypedStorage {
+			insertErr = typedStorage.InsertRowWithCoercion(tableName, columns, values, columnDefs)
+		} else {
+			insertErr = c.storage.InsertRow(tableName, columns, values)
+		}
+		if insertErr != nil {
+			return fmt.Errorf("failed to process row number %d: %w", c.currentLine, insertErr)
 		}
 	}
 
@@ -279,8 +290,15 @@ func (c *csvHandler) loadDataFromFile(tableName string, file *os.File) error {
 		_ = c.bar.Add(1)
 		c.currentLine++
 
-		if err := c.storage.InsertRow(tableName, columns, c.convertToAnyArrayWithTypes(record, columnDefs)); err != nil {
-			return fmt.Errorf("failed to process row number %d: %w", c.currentLine, err)
+		values := c.convertToAnyArrayWithTypes(record, columnDefs)
+		var insertErr error
+		if hasTypedStorage {
+			insertErr = typedStorage.InsertRowWithCoercion(tableName, columns, values, columnDefs)
+		} else {
+			insertErr = c.storage.InsertRow(tableName, columns, values)
+		}
+		if insertErr != nil {
+			return fmt.Errorf("failed to process row number %d: %w", c.currentLine, insertErr)
 		}
 	}
 

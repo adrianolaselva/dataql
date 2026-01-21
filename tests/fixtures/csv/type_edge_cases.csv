@@ -1,0 +1,6 @@
+id,integer_col,float_col,bool_col,scientific,negative
+1,42,3.14,true,1.5e-10,-999
+2,0,0.0,false,2.5E+5,0
+3,,,,,-1
+4,not_a_number,not_a_float,maybe,invalid,positive
+5,9223372036854775807,1.7976931348623157e+308,TRUE,0.0,-9223372036854775808

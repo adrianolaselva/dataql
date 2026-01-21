@@ -291,6 +291,9 @@ func (x *xmlHandler) importRecords(tableName string, records []map[string]string
 
 	x.bar.ChangeMax(x.totalLines)
 
+	// Check if storage supports type coercion
+	typedStorage, hasTypedStorage := x.storage.(storage.TypedStorage)
+
 	// Insert records
 	for i, record := range records {
 		if x.limitLines > 0 && i >= x.limitLines {
@@ -302,8 +305,10 @@ func (x *xmlHandler) importRecords(tableName string, records []map[string]string
 			if val, ok := record[col]; ok && val != "" {
 				values[idx] = val
 			} else {
-				// For numeric columns, use nil instead of empty string
-				if columnDefs[idx].Type == storage.TypeBigInt || columnDefs[idx].Type == storage.TypeDouble {
+				// For numeric/boolean columns, use nil instead of empty string
+				if columnDefs[idx].Type == storage.TypeBigInt ||
+					columnDefs[idx].Type == storage.TypeDouble ||
+					columnDefs[idx].Type == storage.TypeBoolean {
 					values[idx] = nil
 				} else {
 					values[idx] = ""
@@ -311,8 +316,14 @@ func (x *xmlHandler) importRecords(tableName string, records []map[string]string
 			}
 		}
 
-		if err := x.storage.InsertRow(tableName, columns, values); err != nil {
-			return fmt.Errorf("failed to insert row %d: %w", i+1, err)
+		var insertErr error
+		if hasTypedStorage {
+			insertErr = typedStorage.InsertRowWithCoercion(tableName, columns, values, columnDefs)
+		} else {
+			insertErr = x.storage.InsertRow(tableName, columns, values)
+		}
+		if insertErr != nil {
+			return fmt.Errorf("failed to insert row %d: %w", i+1, insertErr)
 		}
 
 		_ = x.bar.Add(1)

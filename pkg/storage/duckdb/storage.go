@@ -115,6 +115,29 @@ func (s *duckDBStorage) InsertRow(tableName string, columns []string, values []a
 	return nil
 }
 
+// InsertRowWithCoercion inserts a row into the specified table, attempting to coerce
+// values to the expected column types. If coercion fails, the value becomes NULL.
+// This method is more flexible than InsertRow when dealing with mixed type data.
+func (s *duckDBStorage) InsertRowWithCoercion(tableName string, columns []string, values []any, columnDefs []storage.ColumnDef) error {
+	coercedValues := make([]any, len(values))
+
+	for i, val := range values {
+		if i < len(columnDefs) {
+			converted, ok := storage.TryConvertValue(val, columnDefs[i].Type)
+			if ok {
+				coercedValues[i] = converted
+			} else {
+				// Fallback to NULL if conversion fails
+				coercedValues[i] = nil
+			}
+		} else {
+			coercedValues[i] = val
+		}
+	}
+
+	return s.InsertRow(tableName, columns, coercedValues)
+}
+
 // Query executes the given SQL query and returns the result rows.
 func (s *duckDBStorage) Query(cmd string) (*sql.Rows, error) {
 	rows, err := s.db.Query(cmd)

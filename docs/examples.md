@@ -429,11 +429,14 @@ LIMIT 10000
 ### Persist for Multiple Queries
 
 ```bash
-# Save to SQLite for repeated queries
-dataql run -f large_data.csv -s ./data.db
+# Save to DuckDB for repeated queries
+dataql run -f large_data.csv -s ./data.duckdb
 
-# Later, query the SQLite directly
-sqlite3 ./data.db "SELECT * FROM large_data WHERE condition"
+# Later, query the DuckDB file
+dataql run -f "duckdb:///./data.duckdb?table=large_data" -q "SELECT * FROM large_data WHERE condition"
+
+# Or use DuckDB CLI directly
+duckdb ./data.duckdb "SELECT * FROM large_data WHERE condition"
 ```
 
 ## Automation Scripts

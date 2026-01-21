@@ -14,7 +14,7 @@ title: DataQL - SQL for Any Data Format
 > A powerful CLI tool for querying and transforming data across multiple formats
 
 DataQL is a CLI tool developed in Go that allows you to query and manipulate data files using SQL statements.
-It loads data into an SQLite database (in-memory or file-based) enabling powerful SQL operations on your data.
+It loads data into a DuckDB database (in-memory or file-based) with automatic type inference, enabling powerful SQL operations optimized for analytical queries.
 
 ---
 
@@ -92,8 +92,8 @@ dataql run -f sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY regi
 - MongoDB
 
 **Key Capabilities:**
-- Execute SQL queries using SQLite syntax
-- Export results to CSV or JSONL formats
+- Execute SQL queries using DuckDB syntax (OLAP-optimized)
+- Export results to CSV, JSONL, JSON, Excel, Parquet, XML, YAML formats
 - Interactive REPL mode with command history
 - Progress bar for large file operations
 - Parallel file processing for multiple inputs

@@ -333,7 +333,7 @@ dataql run -f "dynamodb://us-east-1/my-data-table" -c my_table \
 
 1. DataQL scans the DynamoDB table using the AWS SDK
 2. The schema is inferred from the first item in the table
-3. Data is loaded into an in-memory SQLite database
+3. Data is loaded into an in-memory DuckDB database
 4. You can then query the data using standard SQL syntax
 
 ### Limitations

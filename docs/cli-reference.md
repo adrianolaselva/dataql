@@ -329,11 +329,17 @@ LEFT JOIN table2 b ON a.id = b.foreign_id;
 |----------|-------------|
 | `COUNT(*)` | Count rows |
 | `COUNT(column)` | Count non-null values |
+| `COUNT(DISTINCT column)` | Count distinct values |
 | `SUM(column)` | Sum of values |
 | `AVG(column)` | Average of values |
 | `MIN(column)` | Minimum value |
 | `MAX(column)` | Maximum value |
-| `GROUP_CONCAT(column)` | Concatenate values |
+| `STRING_AGG(column, delimiter)` | Concatenate values with delimiter |
+| `ARRAY_AGG(column)` | Aggregate into array |
+| `MEDIAN(column)` | Median value |
+| `MODE(column)` | Most frequent value |
+| `STDDEV(column)` | Standard deviation |
+| `VARIANCE(column)` | Variance |
 
 ### String Functions
 
@@ -343,26 +349,92 @@ LEFT JOIN table2 b ON a.id = b.foreign_id;
 | `UPPER(str)` | Convert to uppercase |
 | `LOWER(str)` | Convert to lowercase |
 | `TRIM(str)` | Remove leading/trailing spaces |
-| `SUBSTR(str, start, len)` | Extract substring |
+| `LTRIM(str)` | Remove leading spaces |
+| `RTRIM(str)` | Remove trailing spaces |
+| `SUBSTRING(str, start, len)` | Extract substring |
 | `REPLACE(str, old, new)` | Replace occurrences |
-| `INSTR(str, substr)` | Find position of substring |
+| `POSITION(substr IN str)` | Find position of substring |
+| `CONCAT(str1, str2, ...)` | Concatenate strings |
+| `SPLIT_PART(str, delim, n)` | Split and get nth part |
+| `REGEXP_MATCHES(str, pattern)` | Regex matching |
+| `REGEXP_REPLACE(str, pattern, repl)` | Regex replace |
+| `LEFT(str, n)` | Left n characters |
+| `RIGHT(str, n)` | Right n characters |
+| `REVERSE(str)` | Reverse string |
 
 ### Date/Time Functions
 
 | Function | Description |
 |----------|-------------|
-| `DATE(value)` | Extract date |
-| `TIME(value)` | Extract time |
-| `DATETIME(value)` | Date and time |
-| `STRFTIME(format, value)` | Format date/time |
-| `JULIANDAY(value)` | Julian day number |
+| `CURRENT_DATE` | Current date |
+| `CURRENT_TIME` | Current time |
+| `CURRENT_TIMESTAMP` | Current timestamp |
+| `DATE_PART('part', value)` | Extract part (year, month, day, hour, etc.) |
+| `DATE_TRUNC('part', value)` | Truncate to specified precision |
+| `STRFTIME(value, format)` | Format date/time |
+| `DATE_DIFF('part', start, end)` | Difference between dates |
+| `DATE_ADD(date, INTERVAL n unit)` | Add interval to date |
+| `EXTRACT(part FROM value)` | Extract part from timestamp |
+
+### Window Functions
+
+| Function | Description |
+|----------|-------------|
+| `ROW_NUMBER() OVER (...)` | Row number within partition |
+| `RANK() OVER (...)` | Rank with gaps |
+| `DENSE_RANK() OVER (...)` | Rank without gaps |
+| `LAG(col, n) OVER (...)` | Access previous row value |
+| `LEAD(col, n) OVER (...)` | Access next row value |
+| `FIRST_VALUE(col) OVER (...)` | First value in window |
+| `LAST_VALUE(col) OVER (...)` | Last value in window |
+| `SUM(col) OVER (...)` | Running sum |
+| `AVG(col) OVER (...)` | Running average |
 
 ### Type Conversion
 
 ```sql
 SELECT CAST(amount AS INTEGER) FROM data;
-SELECT CAST(price AS REAL) FROM data;
-SELECT CAST(id AS TEXT) FROM data;
+SELECT CAST(price AS DOUBLE) FROM data;
+SELECT CAST(id AS VARCHAR) FROM data;
+SELECT TRY_CAST(value AS INTEGER) FROM data;  -- Returns NULL on error
+```
+
+### Common Table Expressions (CTEs)
+
+```sql
+WITH active_users AS (
+    SELECT * FROM users WHERE status = 'active'
+)
+SELECT * FROM active_users WHERE age > 30;
+```
+
+### CASE Expressions
+
+```sql
+SELECT
+    name,
+    CASE
+        WHEN amount > 1000 THEN 'high'
+        WHEN amount > 100 THEN 'medium'
+        ELSE 'low'
+    END as tier
+FROM data;
+```
+
+### Analytical Functions
+
+```sql
+-- Percentiles
+SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount) as median FROM data;
+
+-- String aggregation
+SELECT STRING_AGG(name, ', ') as names FROM data GROUP BY category;
+
+-- Conditional aggregation
+SELECT
+    COUNT(*) FILTER (WHERE status = 'active') as active_count,
+    COUNT(*) FILTER (WHERE status = 'inactive') as inactive_count
+FROM users;
 ```
 
 ## Environment Variables

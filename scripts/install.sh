@@ -253,14 +253,25 @@ clean_all_installations() {
         else
             sudo rm -f "${INSTALL_DIR}/${BINARY_NAME}"
         fi
+        # Verify removal
+        if [ -f "${INSTALL_DIR}/${BINARY_NAME}" ]; then
+            die "Failed to remove ${INSTALL_DIR}/${BINARY_NAME}. Check permissions."
+        fi
         success "Removed ${INSTALL_DIR}/${BINARY_NAME}"
     fi
 
     if [ -f "${LOCAL_INSTALL_DIR}/${BINARY_NAME}" ]; then
         info "Removing ${LOCAL_INSTALL_DIR}/${BINARY_NAME}..."
         rm -f "${LOCAL_INSTALL_DIR}/${BINARY_NAME}"
+        # Verify removal
+        if [ -f "${LOCAL_INSTALL_DIR}/${BINARY_NAME}" ]; then
+            die "Failed to remove ${LOCAL_INSTALL_DIR}/${BINARY_NAME}. Check permissions."
+        fi
         success "Removed ${LOCAL_INSTALL_DIR}/${BINARY_NAME}"
     fi
+
+    # Also clear shell hash table
+    hash -r 2>/dev/null || true
 }
 
 # Print usage
@@ -270,7 +281,8 @@ usage() {
     echo "Options:"
     echo "  --version, -v VERSION   Install specific version (e.g., v1.0.0)"
     echo "  --local, -l             Install to ~/.local/bin (no sudo required)"
-    echo "  --force, -f             Force reinstall even if already installed"
+    echo "  --force, -f             Force reinstall (always downloads and installs)"
+    echo "  --reinstall             Alias for --force"
     echo "  --upgrade, -u           Upgrade to latest version (only if newer)"
     echo "  --clean, -c             Remove all existing installations first"
     echo "  --help, -h              Show this help message"
@@ -279,6 +291,7 @@ usage() {
     echo "  $0                      Install latest version (first time)"
     echo "  $0 --upgrade            Upgrade to latest version if newer"
     echo "  $0 --force              Force reinstall latest version"
+    echo "  $0 --reinstall          Same as --force"
     echo "  $0 --clean --force      Clean all installations, then install"
     echo "  $0 --version v1.0.0     Install specific version"
     echo "  $0 --local              Install to ~/.local/bin (no sudo)"
@@ -297,7 +310,7 @@ parse_args() {
                 LOCAL_INSTALL=true
                 shift
                 ;;
-            --force|-f)
+            --force|-f|--reinstall)
                 FORCE=true
                 shift
                 ;;
@@ -338,6 +351,24 @@ main() {
 
     info "Detected: ${os}/${arch}"
 
+    # Show installation mode
+    local mode_info=""
+    if [ "$CLEAN" = true ]; then
+        mode_info="${mode_info}clean "
+    fi
+    if [ "$FORCE" = true ]; then
+        mode_info="${mode_info}force "
+    fi
+    if [ "$UPGRADE" = true ]; then
+        mode_info="${mode_info}upgrade "
+    fi
+    if [ "$LOCAL_INSTALL" = true ]; then
+        mode_info="${mode_info}local "
+    fi
+    if [ -n "$mode_info" ]; then
+        info "Installation mode: ${mode_info}"
+    fi
+
     # Clean all installations if requested
     if [ "$CLEAN" = true ]; then
         clean_all_installations
@@ -366,45 +397,38 @@ main() {
         existing_version=$("$existing_binary" --version 2>/dev/null | head -1 || echo "unknown")
         info "Installed version: ${existing_version}"
 
-        local installed_ver target_ver
-        installed_ver=$(extract_version_number "$existing_version")
-        target_ver=$(extract_version_number "$VERSION")
+        # If --force is specified, always reinstall without version checking
+        if [ "$FORCE" = true ]; then
+            info "Force reinstalling ${VERSION}..."
+        elif [ "$UPGRADE" = true ]; then
+            local installed_ver target_ver
+            installed_ver=$(extract_version_number "$existing_version")
+            target_ver=$(extract_version_number "$VERSION")
 
-        # Compare versions
-        compare_versions "$installed_ver" "$target_ver"
-        local cmp_result=$?
+            # Compare versions (use || true to prevent set -e from exiting on non-zero return)
+            compare_versions "$installed_ver" "$target_ver" || true
+            local cmp_result=$?
 
-        # Handle --upgrade flag
-        if [ "$UPGRADE" = true ]; then
             if [ $cmp_result -eq 0 ]; then
                 # Same version
-                if [ "$FORCE" = true ]; then
-                    info "Reinstalling same version ${VERSION} (--force specified)..."
-                else
-                    success "Already at version ${VERSION}. No upgrade needed."
-                    exit 0
-                fi
+                success "Already at version ${VERSION}. No upgrade needed."
+                echo "Use --force to reinstall the same version."
+                exit 0
             elif [ $cmp_result -eq 1 ]; then
                 # Installed is newer than target (downgrade)
-                if [ "$FORCE" = true ]; then
-                    warn "Downgrading from ${installed_ver} to ${target_ver} (--force specified)..."
-                else
-                    warn "Installed version (${installed_ver}) is newer than target (${target_ver})"
-                    echo "Use --force to downgrade"
-                    exit 0
-                fi
+                warn "Installed version (${installed_ver}) is newer than target (${target_ver})"
+                echo "Use --force to downgrade."
+                exit 0
             else
                 # Target is newer (upgrade)
                 info "Upgrading from ${installed_ver} to ${target_ver}..."
             fi
-        elif [ "$FORCE" = true ]; then
-            info "Force reinstalling ${VERSION}..."
         else
             warn "${BINARY_NAME} is already installed: ${existing_version}"
             echo ""
             echo "Options:"
             echo "  --upgrade  Upgrade to latest version (if newer)"
-            echo "  --force    Force reinstall"
+            echo "  --force    Force reinstall (always reinstalls)"
             echo "  --clean    Remove all installations first"
             exit 0
         fi
@@ -473,6 +497,16 @@ main() {
     # Install
     local dest="${install_dir}/${BINARY_NAME}"
     info "Installing to ${dest}..."
+
+    # Remove existing binary first to ensure clean replacement
+    if [ -f "$dest" ]; then
+        info "Removing existing binary at ${dest}..."
+        if [ "$LOCAL_INSTALL" = true ]; then
+            rm -f "$dest"
+        else
+            sudo rm -f "$dest"
+        fi
+    fi
 
     if [ "$LOCAL_INSTALL" = true ]; then
         cp "$binary_path" "$dest"

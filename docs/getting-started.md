@@ -29,13 +29,13 @@ irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install
 **Linux / macOS:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --version v0.1.0
+curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash -s -- --version v1.0.0
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-$env:DATAQL_VERSION="v0.1.0"; irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
+$env:DATAQL_VERSION="v1.0.0"; irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
 ```
 
 ### User Installation (No sudo required)

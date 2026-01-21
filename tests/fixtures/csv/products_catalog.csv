@@ -1,0 +1,11 @@
+product_id,name,category,subcategory,price,stock,weight_kg,rating
+1,Laptop Pro,Electronics,Computers,999.99,50,2.5,4.5
+2,Wireless Mouse,Electronics,Accessories,29.99,500,0.1,4.2
+3,Mechanical Keyboard,Electronics,Accessories,79.99,200,0.8,4.7
+4,4K Monitor,Electronics,Displays,399.99,75,5.5,4.6
+5,Ergonomic Chair,Furniture,Office,199.99,100,15.0,4.3
+6,Standing Desk,Furniture,Office,349.99,40,35.0,4.4
+7,LED Lamp,Furniture,Lighting,49.99,300,1.2,4.1
+8,Smartphone X,Electronics,Mobile,699.99,150,0.2,4.8
+9,Tablet Pro,Electronics,Mobile,449.99,80,0.5,4.5
+10,Noise Cancel Headphones,Electronics,Audio,149.99,120,0.3,4.6

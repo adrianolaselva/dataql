@@ -1,0 +1,11 @@
+id,name,department,manager_id,salary,hire_date,active
+1,John Smith,Engineering,,120000,2020-01-15,true
+2,Jane Doe,Engineering,1,95000,2021-03-20,true
+3,Bob Wilson,Engineering,1,90000,2021-06-10,true
+4,Alice Brown,Sales,,110000,2019-05-01,true
+5,Charlie Davis,Sales,4,75000,2022-02-14,true
+6,Diana Miller,Sales,4,80000,2021-11-30,true
+7,Eve Johnson,Marketing,,105000,2020-08-22,true
+8,Frank Lee,Marketing,7,70000,2023-01-10,true
+9,Grace Kim,Engineering,1,85000,2022-07-05,false
+10,Henry Chen,Sales,4,72000,2023-04-18,true

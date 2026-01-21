@@ -34,7 +34,7 @@ import (
 	"github.com/adrianolaselva/dataql/pkg/s3handler"
 	"github.com/adrianolaselva/dataql/pkg/stdinhandler"
 	"github.com/adrianolaselva/dataql/pkg/storage"
-	"github.com/adrianolaselva/dataql/pkg/storage/sqlite"
+	"github.com/adrianolaselva/dataql/pkg/storage/duckdb"
 	"github.com/adrianolaselva/dataql/pkg/urlhandler"
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
@@ -155,8 +155,8 @@ func New(params Params) (DataQL, error) {
 	params.FileInputs = resolvedFiles
 	verboseLog(params.Verbose, "Resolved file inputs: %v", params.FileInputs)
 
-	verboseLog(params.Verbose, "Initializing SQLite storage...")
-	sqLiteStorage, err := sqlite.NewSqLiteStorage(params.DataSourceName)
+	verboseLog(params.Verbose, "Initializing DuckDB storage...")
+	duckDBStorage, err := duckdb.NewDuckDBStorage(params.DataSourceName)
 	if err != nil {
 		_ = stdinH.Cleanup()
 		_ = urlH.Cleanup()
@@ -181,7 +181,7 @@ func New(params Params) (DataQL, error) {
 		}))
 
 	verboseLog(params.Verbose, "Creating file handler...")
-	handler, err := createFileHandler(params, bar, sqLiteStorage)
+	handler, err := createFileHandler(params, bar, duckDBStorage)
 	if err != nil {
 		_ = stdinH.Cleanup()
 		_ = urlH.Cleanup()
@@ -192,7 +192,7 @@ func New(params Params) (DataQL, error) {
 	}
 
 	verboseLog(params.Verbose, "DataQL initialization complete")
-	return &dataQL{params: params, bar: bar, fileHandler: handler, storage: sqLiteStorage, urlHandler: urlH, s3Handler: s3H, gcsHandler: gcsH, azureHandler: azureH, stdinHandler: stdinH, pageSize: defaultPageSize}, nil
+	return &dataQL{params: params, bar: bar, fileHandler: handler, storage: duckDBStorage, urlHandler: urlH, s3Handler: s3H, gcsHandler: gcsH, azureHandler: azureH, stdinHandler: stdinH, pageSize: defaultPageSize}, nil
 }
 
 // createFileHandler creates the appropriate file handler based on file format
@@ -605,7 +605,15 @@ SQL Examples:
 
 // describeTable shows the schema of a table
 func (d *dataQL) describeTable(tableName string) error {
-	query := fmt.Sprintf("PRAGMA table_info(%s)", tableName)
+	// Use DuckDB's information_schema to get column information
+	query := fmt.Sprintf(`SELECT
+		column_name AS name,
+		data_type AS type,
+		CASE WHEN is_nullable = 'YES' THEN 0 ELSE 1 END AS notnull,
+		column_default AS dflt_value
+		FROM information_schema.columns
+		WHERE table_schema = 'main' AND table_name = '%s'
+		ORDER BY ordinal_position`, tableName)
 	rows, err := d.storage.Query(query)
 	if err != nil {
 		return fmt.Errorf("failed to describe table: %w", err)

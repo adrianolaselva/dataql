@@ -72,11 +72,15 @@ func (c *csvExport) readAndAppendFile(w *csv.Writer) error {
 	return nil
 }
 
-// convertToStringArray convert string array to string array
+// convertToStringArray converts interface array to string array
 func (c *csvExport) convertToStringArray(records []interface{}) []string {
 	values := make([]string, 0, len(records))
 	for _, r := range records {
-		values = append(values, r.(string))
+		if r == nil {
+			values = append(values, "")
+		} else {
+			values = append(values, fmt.Sprintf("%v", r))
+		}
 	}
 
 	return values

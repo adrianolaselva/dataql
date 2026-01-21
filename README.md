@@ -30,7 +30,7 @@
 ---
 
 DataQL is a CLI tool developed in Go that allows you to query and manipulate data files using SQL statements.
-It loads data into an SQLite database (in-memory or file-based) enabling powerful SQL operations on your data.
+It loads data into a DuckDB database (in-memory or file-based) with automatic type inference, enabling powerful SQL operations optimized for analytical queries.
 
 ## Why DataQL?
 
@@ -131,7 +131,7 @@ dataql run -f data.csv
 - DynamoDB
 
 **Key Capabilities:**
-- Execute SQL queries using SQLite syntax
+- Execute SQL queries using DuckDB syntax (OLAP-optimized)
 - Export results to CSV, JSONL, JSON, Excel, Parquet, XML, YAML formats
 - Interactive REPL mode with command history
 - Progress bar for large file operations
@@ -320,7 +320,7 @@ dataql run -f data.jsonl
 | `--query` | `-q` | SQL query to execute | - |
 | `--export` | `-e` | Export path | - |
 | `--type` | `-t` | Export format (`csv`, `jsonl`, `json`, `excel`, `parquet`, `xml`, `yaml`) | - |
-| `--storage` | `-s` | SQLite file path (for persistence) | In-memory |
+| `--storage` | `-s` | DuckDB file path (for persistence) | In-memory |
 | `--lines` | `-l` | Limit number of lines/records to read | All |
 | `--collection` | `-c` | Custom table name | Filename |
 
@@ -398,10 +398,10 @@ dataql run -f events.ndjson -q "SELECT COUNT(*) as total FROM events"
 dataql run -f data.json -c my_table -q "SELECT * FROM my_table"
 ```
 
-**Persist to SQLite File:**
+**Persist to DuckDB File:**
 
 ```bash
-dataql run -f data.csv -d "," -s ./database.db
+dataql run -f data.csv -d "," -s ./database.duckdb
 ```
 
 **Query from URL:**
@@ -452,7 +452,7 @@ dataql run -f survey.csv -d "," \
 
 ## SQL Reference
 
-DataQL uses SQLite under the hood, supporting standard SQL syntax:
+DataQL uses DuckDB under the hood, supporting standard SQL syntax optimized for analytical queries:
 
 ```sql
 -- Basic SELECT
@@ -491,7 +491,7 @@ For detailed documentation, see:
 ### Prerequisites
 
 - Go 1.24 or higher
-- GCC (for CGO compilation - required for SQLite, DuckDB)
+- GCC (for CGO compilation - required for DuckDB)
 - Docker and Docker Compose (for E2E tests)
 
 ### Building
@@ -556,6 +556,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [csvql](https://github.com/adrianolaselva/csvql) - The original project that inspired this rewrite
 - [Claude Code](https://claude.ai/claude-code) - AI assistant that helped build this entire project
-- [SQLite](https://www.sqlite.org/) - Embedded database engine
+- [DuckDB](https://duckdb.org/) - Embedded analytical database engine
 - [Cobra](https://github.com/spf13/cobra) - CLI framework
-- [go-sqlite3](https://github.com/mattn/go-sqlite3) - SQLite driver for Go
+- [go-duckdb](https://github.com/marcboeker/go-duckdb) - DuckDB driver for Go

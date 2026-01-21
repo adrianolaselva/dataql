@@ -1,6 +1,7 @@
 package repl
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/adrianolaselva/dataql/pkg/storage"
@@ -73,8 +74,12 @@ func (c *SQLCompleter) RefreshSchema() error {
 
 // getTableColumns retrieves column names for a table
 func (c *SQLCompleter) getTableColumns(tableName string) ([]string, error) {
-	// Use PRAGMA table_info for SQLite
-	rows, err := c.storage.Query("PRAGMA table_info(" + tableName + ")")
+	// Use DuckDB's information_schema to get column names
+	query := fmt.Sprintf(`SELECT column_name
+		FROM information_schema.columns
+		WHERE table_schema = 'main' AND table_name = '%s'
+		ORDER BY ordinal_position`, tableName)
+	rows, err := c.storage.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -82,11 +87,8 @@ func (c *SQLCompleter) getTableColumns(tableName string) ([]string, error) {
 
 	var columns []string
 	for rows.Next() {
-		var cid int
-		var name, ctype string
-		var notNull, pk int
-		var dfltValue interface{}
-		if err := rows.Scan(&cid, &name, &ctype, &notNull, &dfltValue, &pk); err != nil {
+		var name string
+		if err := rows.Scan(&name); err != nil {
 			continue
 		}
 		columns = append(columns, name)

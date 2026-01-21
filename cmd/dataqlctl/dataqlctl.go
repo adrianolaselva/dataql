@@ -77,7 +77,7 @@ func (c *dataQlCtl) Command() (*cobra.Command, error) {
 
 	command.
 		PersistentFlags().
-		StringVarP(&c.params.DataSourceName, storageParam, storageShortParam, "", "sqlite file path")
+		StringVarP(&c.params.DataSourceName, storageParam, storageShortParam, "", "DuckDB file path for persistence (default: in-memory)")
 
 	command.
 		PersistentFlags().

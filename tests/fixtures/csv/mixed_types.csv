@@ -1,0 +1,6 @@
+id,value,status
+1,100,active
+2,200.5,inactive
+3,three hundred,pending
+4,,
+5,500,

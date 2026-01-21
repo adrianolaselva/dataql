@@ -1,0 +1,4 @@
+{"id": 1, "value": 100, "type": "integer"}
+{"id": 2, "value": 200.5, "type": "float"}
+{"id": 3, "value": "three hundred", "type": "string"}
+{"id": 4, "value": null, "type": "null"}

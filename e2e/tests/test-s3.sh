@@ -145,7 +145,7 @@ test_s3_csv_limit() {
 
 test_s3_json_basic_read() {
     log_info "Test: Read JSON array file from S3"
-    result=$($DATAQL_BIN run -q "SELECT * FROM array" -f "$DATAQL_TEST_S3_JSON" 2>&1)
+    result=$($DATAQL_BIN run -q "SELECT * FROM people" -f "$DATAQL_TEST_S3_JSON" 2>&1)
     if echo "$result" | grep -q "Alice" && echo "$result" | grep -q "Bob"; then
         log_pass "Basic JSON read from S3 works"
     else
@@ -155,7 +155,7 @@ test_s3_json_basic_read() {
 
 test_s3_json_where_clause() {
     log_info "Test: WHERE clause on S3 JSON data"
-    result=$($DATAQL_BIN run -q "SELECT name, age FROM array WHERE age < 30" -f "$DATAQL_TEST_S3_JSON" 2>&1)
+    result=$($DATAQL_BIN run -q "SELECT name, age FROM people WHERE age < 30" -f "$DATAQL_TEST_S3_JSON" 2>&1)
     if echo "$result" | grep -q "Alice" && echo "$result" | grep -q "Eve"; then
         log_pass "WHERE clause on S3 JSON works"
     else

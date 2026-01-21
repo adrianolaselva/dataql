@@ -378,7 +378,7 @@ func TestError_InvalidStoragePath(t *testing.T) {
 func TestError_MixedFormats(t *testing.T) {
 	_, stderr, err := runDataQL(t, "run",
 		"-f", fixture("csv/simple.csv"),
-		"-f", fixture("json/array.json"),
+		"-f", fixture("json/people.json"),
 		"-q", "SELECT * FROM simple")
 
 	assertError(t, err)

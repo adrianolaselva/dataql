@@ -1,0 +1,6 @@
+[
+  {"id": 1, "value": 100, "active": true, "score": 95.5},
+  {"id": 2, "value": "two hundred", "active": false, "score": "N/A"},
+  {"id": 3, "value": 300.5, "active": null, "score": 87},
+  {"id": 4, "value": null, "active": true, "score": null}
+]

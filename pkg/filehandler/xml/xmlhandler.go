@@ -252,9 +252,36 @@ func (x *xmlHandler) importRecords(tableName string, records []map[string]string
 	}
 	sort.Strings(columns)
 
-	// Build table structure
-	if err := x.storage.BuildStructure(tableName, columns); err != nil {
-		return fmt.Errorf("failed to build structure: %w", err)
+	// Collect sample rows for type inference (up to 100 rows)
+	sampleSize := 100
+	if len(records) < sampleSize {
+		sampleSize = len(records)
+	}
+	sampleRows := make([][]any, sampleSize)
+	for i := 0; i < sampleSize; i++ {
+		row := make([]any, len(columns))
+		for idx, col := range columns {
+			if val, ok := records[i][col]; ok {
+				row[idx] = val
+			} else {
+				row[idx] = ""
+			}
+		}
+		sampleRows[i] = row
+	}
+
+	// Infer column types from sample data
+	columnDefs := storage.InferColumnTypes(columns, sampleRows)
+
+	// Build table structure with inferred types if storage supports it
+	if typedStorage, ok := x.storage.(storage.TypedStorage); ok {
+		if err := typedStorage.BuildStructureWithTypes(tableName, columnDefs); err != nil {
+			return fmt.Errorf("failed to build structure with types: %w", err)
+		}
+	} else {
+		if err := x.storage.BuildStructure(tableName, columns); err != nil {
+			return fmt.Errorf("failed to build structure: %w", err)
+		}
 	}
 
 	x.totalLines = len(records)
@@ -264,6 +291,9 @@ func (x *xmlHandler) importRecords(tableName string, records []map[string]string
 
 	x.bar.ChangeMax(x.totalLines)
 
+	// Check if storage supports type coercion
+	typedStorage, hasTypedStorage := x.storage.(storage.TypedStorage)
+
 	// Insert records
 	for i, record := range records {
 		if x.limitLines > 0 && i >= x.limitLines {
@@ -272,15 +302,28 @@ func (x *xmlHandler) importRecords(tableName string, records []map[string]string
 
 		values := make([]any, len(columns))
 		for idx, col := range columns {
-			if val, ok := record[col]; ok {
+			if val, ok := record[col]; ok && val != "" {
 				values[idx] = val
 			} else {
-				values[idx] = ""
+				// For numeric/boolean columns, use nil instead of empty string
+				if columnDefs[idx].Type == storage.TypeBigInt ||
+					columnDefs[idx].Type == storage.TypeDouble ||
+					columnDefs[idx].Type == storage.TypeBoolean {
+					values[idx] = nil
+				} else {
+					values[idx] = ""
+				}
 			}
 		}
 
-		if err := x.storage.InsertRow(tableName, columns, values); err != nil {
-			return fmt.Errorf("failed to insert row %d: %w", i+1, err)
+		var insertErr error
+		if hasTypedStorage {
+			insertErr = typedStorage.InsertRowWithCoercion(tableName, columns, values, columnDefs)
+		} else {
+			insertErr = x.storage.InsertRow(tableName, columns, values)
+		}
+		if insertErr != nil {
+			return fmt.Errorf("failed to insert row %d: %w", i+1, insertErr)
 		}
 
 		_ = x.bar.Add(1)

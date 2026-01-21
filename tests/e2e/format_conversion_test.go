@@ -103,8 +103,8 @@ func TestConversion_CSV_To_Parquet(t *testing.T) {
 func TestConversion_JSON_To_CSV(t *testing.T) {
 	outputFile := tempFile(t, "output.csv")
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "csv")
 
@@ -115,8 +115,8 @@ func TestConversion_JSON_To_CSV(t *testing.T) {
 func TestConversion_JSON_To_JSONL(t *testing.T) {
 	outputFile := tempFile(t, "output.jsonl")
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "jsonl")
 
@@ -127,8 +127,8 @@ func TestConversion_JSON_To_JSONL(t *testing.T) {
 func TestConversion_JSON_To_JSON(t *testing.T) {
 	outputFile := tempFile(t, "output.json")
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "json")
 
@@ -139,8 +139,8 @@ func TestConversion_JSON_To_JSON(t *testing.T) {
 func TestConversion_JSON_To_XML(t *testing.T) {
 	outputFile := tempFile(t, "output.xml")
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "xml")
 
@@ -151,8 +151,8 @@ func TestConversion_JSON_To_XML(t *testing.T) {
 func TestConversion_JSON_To_YAML(t *testing.T) {
 	outputFile := tempFile(t, "output.yaml")
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "yaml")
 
@@ -163,8 +163,8 @@ func TestConversion_JSON_To_YAML(t *testing.T) {
 func TestConversion_JSON_To_Excel(t *testing.T) {
 	outputFile := tempFile(t, "output.xlsx")
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "excel")
 
@@ -175,8 +175,8 @@ func TestConversion_JSON_To_Excel(t *testing.T) {
 func TestConversion_JSON_To_Parquet(t *testing.T) {
 	outputFile := tempFile(t, "output.parquet")
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "parquet")
 
@@ -652,8 +652,8 @@ func TestConversion_DataIntegrity_CSV_To_JSON_To_CSV(t *testing.T) {
 func TestConversion_DataIntegrity_JSON_To_YAML_To_JSON(t *testing.T) {
 	yamlFile := tempFile(t, "intermediate.yaml")
 	_, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", yamlFile,
 		"-t", "yaml")
 	assertNoError(t, err, stderr)

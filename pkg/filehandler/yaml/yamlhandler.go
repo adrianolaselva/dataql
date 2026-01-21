@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/adrianolaselva/dataql/pkg/filehandler"
@@ -121,11 +122,43 @@ func (y *yamlHandler) importFile(filePath string) error {
 	for col := range columnSet {
 		columns = append(columns, col)
 	}
+	sort.Strings(columns)
 
-	// Build table structure
-	if err := y.storage.BuildStructure(collectionName, columns); err != nil {
-		return fmt.Errorf("failed to build structure: %w", err)
+	// Collect sample rows for type inference (up to 100 rows)
+	sampleSize := 100
+	if len(records) < sampleSize {
+		sampleSize = len(records)
 	}
+	sampleRows := make([][]any, sampleSize)
+	for i := 0; i < sampleSize; i++ {
+		flatRecord := y.flattenMap(records[i], "")
+		row := make([]any, len(columns))
+		for idx, col := range columns {
+			if val, ok := flatRecord[col]; ok {
+				row[idx] = val
+			} else {
+				row[idx] = ""
+			}
+		}
+		sampleRows[i] = row
+	}
+
+	// Infer column types from sample data
+	columnDefs := storage.InferColumnTypes(columns, sampleRows)
+
+	// Build table structure with inferred types if storage supports it
+	if typedStorage, ok := y.storage.(storage.TypedStorage); ok {
+		if err := typedStorage.BuildStructureWithTypes(collectionName, columnDefs); err != nil {
+			return fmt.Errorf("failed to build structure with types: %w", err)
+		}
+	} else {
+		if err := y.storage.BuildStructure(collectionName, columns); err != nil {
+			return fmt.Errorf("failed to build structure: %w", err)
+		}
+	}
+
+	// Check if storage supports type coercion
+	typedStorage, hasTypedStorage := y.storage.(storage.TypedStorage)
 
 	// Insert records
 	for i, record := range records {
@@ -136,15 +169,28 @@ func (y *yamlHandler) importFile(filePath string) error {
 		flatRecord := y.flattenMap(record, "")
 		values := make([]any, len(columns))
 		for j, col := range columns {
-			if val, ok := flatRecord[col]; ok {
-				values[j] = fmt.Sprintf("%v", val)
+			if val, ok := flatRecord[col]; ok && val != "" {
+				values[j] = val
 			} else {
-				values[j] = ""
+				// For numeric/boolean columns, use nil instead of empty string
+				if columnDefs[j].Type == storage.TypeBigInt ||
+					columnDefs[j].Type == storage.TypeDouble ||
+					columnDefs[j].Type == storage.TypeBoolean {
+					values[j] = nil
+				} else {
+					values[j] = ""
+				}
 			}
 		}
 
-		if err := y.storage.InsertRow(collectionName, columns, values); err != nil {
-			return fmt.Errorf("failed to insert row: %w", err)
+		var insertErr error
+		if hasTypedStorage {
+			insertErr = typedStorage.InsertRowWithCoercion(collectionName, columns, values, columnDefs)
+		} else {
+			insertErr = y.storage.InsertRow(collectionName, columns, values)
+		}
+		if insertErr != nil {
+			return fmt.Errorf("failed to insert row: %w", insertErr)
 		}
 
 		y.totalLines++

@@ -6,8 +6,8 @@ import (
 
 func TestJSON_Array(t *testing.T) {
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT COUNT(*) as count FROM array")
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT COUNT(*) as count FROM people")
 
 	assertNoError(t, err, stderr)
 	assertContains(t, stdout, "3")
@@ -42,9 +42,9 @@ func TestJSON_EmptyArray(t *testing.T) {
 
 func TestJSON_WithLineLimit(t *testing.T) {
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
+		"-f", fixture("json/people.json"),
 		"-l", "2",
-		"-q", "SELECT COUNT(*) as count FROM array")
+		"-q", "SELECT COUNT(*) as count FROM people")
 
 	assertNoError(t, err, stderr)
 	assertContains(t, stdout, "2")
@@ -52,7 +52,7 @@ func TestJSON_WithLineLimit(t *testing.T) {
 
 func TestJSON_WithCollection(t *testing.T) {
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
+		"-f", fixture("json/people.json"),
 		"-c", "custom_data",
 		"-q", "SELECT COUNT(*) as count FROM custom_data")
 
@@ -70,8 +70,8 @@ func TestJSON_InvalidJSON(t *testing.T) {
 
 func TestJSON_SelectAllColumns(t *testing.T) {
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array WHERE id = '1'")
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people WHERE id = '1'")
 
 	assertNoError(t, err, stderr)
 	assertContains(t, stdout, "Alice")
@@ -85,8 +85,8 @@ func TestJSON_SelectAllColumns(t *testing.T) {
 // being modified in-place causing value lookups to fail.
 func TestJSON_DataIntegrity_RegressionBug(t *testing.T) {
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT id, name, age FROM array ORDER BY id")
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT id, name, age FROM people ORDER BY id")
 
 	assertNoError(t, err, stderr)
 	// Verify actual data values are present, not empty strings
@@ -105,8 +105,8 @@ func TestJSON_ExportDataIntegrity_RegressionBug(t *testing.T) {
 	outputFile := tempFile(t, "regression_output.csv")
 
 	_, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "csv")
 

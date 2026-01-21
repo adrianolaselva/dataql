@@ -25,7 +25,7 @@ dataql run [flags]
 | `--delimiter` | `-d` | CSV field delimiter | `,` | No |
 | `--export` | `-e` | Export results to file path | - | No |
 | `--type` | `-t` | Export format (`csv`, `jsonl`, `json`, `xml`, `yaml`, `excel`, `parquet`) | - | No |
-| `--storage` | `-s` | SQLite file path for persistence | In-memory | No |
+| `--storage` | `-s` | DuckDB file path for persistence | In-memory | No |
 | `--lines` | `-l` | Limit number of records to read | All | No |
 | `--collection` | `-c` | Custom table name | Filename | No |
 
@@ -238,10 +238,10 @@ JOIN customers c ON o.customer_id = c.id
 "
 ```
 
-### Persist to SQLite File
+### Persist to DuckDB File
 
 ```bash
-dataql run -f data.csv -s ./my_database.db
+dataql run -f data.csv -s ./my_database.duckdb
 ```
 
 ### Query from URL
@@ -259,7 +259,7 @@ curl -s "https://api.example.com/data.json" | dataql run -f - -q "SELECT * FROM 
 
 ## SQL Reference
 
-DataQL uses SQLite under the hood. All standard SQLite SQL syntax is supported.
+DataQL uses DuckDB under the hood. All standard DuckDB SQL syntax is supported, optimized for analytical queries (OLAP).
 
 ### SELECT
 

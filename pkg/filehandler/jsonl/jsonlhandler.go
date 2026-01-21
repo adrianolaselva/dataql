@@ -94,15 +94,21 @@ func (j *jsonlHandler) loadFile(filePath string) error {
 
 	tableName := j.formatTableName(filePath)
 
-	// First pass: detect all columns
-	columns, err := j.detectColumns(filePath)
+	// First pass: detect all columns and their types
+	columnDefs, columns, err := j.detectColumnsWithTypes(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to detect columns: %w", err)
 	}
 
-	// Build table structure
-	if err := j.storage.BuildStructure(tableName, columns); err != nil {
-		return fmt.Errorf("failed to build structure: %w", err)
+	// Build table structure with inferred types if storage supports it
+	if typedStorage, ok := j.storage.(storage.TypedStorage); ok {
+		if err := typedStorage.BuildStructureWithTypes(tableName, columnDefs); err != nil {
+			return fmt.Errorf("failed to build structure with types: %w", err)
+		}
+	} else {
+		if err := j.storage.BuildStructure(tableName, columns); err != nil {
+			return fmt.Errorf("failed to build structure: %w", err)
+		}
 	}
 
 	// Second pass: import data
@@ -111,6 +117,9 @@ func (j *jsonlHandler) loadFile(filePath string) error {
 	const maxScanTokenSize = 10 * 1024 * 1024 // 10MB
 	buf := make([]byte, maxScanTokenSize)
 	scanner.Buffer(buf, maxScanTokenSize)
+
+	// Check if storage supports type coercion
+	typedStorage, hasTypedStorage := j.storage.(storage.TypedStorage)
 
 	lineNum := 0
 	for scanner.Scan() {
@@ -134,15 +143,28 @@ func (j *jsonlHandler) loadFile(filePath string) error {
 
 		values := make([]any, len(columns))
 		for idx, col := range columns {
-			if val, ok := flat[col]; ok {
+			if val, ok := flat[col]; ok && val != "" {
 				values[idx] = val
 			} else {
-				values[idx] = ""
+				// For numeric/boolean columns, use nil instead of empty string
+				if columnDefs[idx].Type == storage.TypeBigInt ||
+					columnDefs[idx].Type == storage.TypeDouble ||
+					columnDefs[idx].Type == storage.TypeBoolean {
+					values[idx] = nil
+				} else {
+					values[idx] = ""
+				}
 			}
 		}
 
-		if err := j.storage.InsertRow(tableName, columns, values); err != nil {
-			return fmt.Errorf("failed to insert row %d: %w", lineNum, err)
+		var insertErr error
+		if hasTypedStorage {
+			insertErr = typedStorage.InsertRowWithCoercion(tableName, columns, values, columnDefs)
+		} else {
+			insertErr = j.storage.InsertRow(tableName, columns, values)
+		}
+		if insertErr != nil {
+			return fmt.Errorf("failed to insert row %d: %w", lineNum, insertErr)
 		}
 
 		_ = j.bar.Add(1)
@@ -156,11 +178,11 @@ func (j *jsonlHandler) loadFile(filePath string) error {
 	return nil
 }
 
-// detectColumns scans the file to detect all unique columns
-func (j *jsonlHandler) detectColumns(filePath string) ([]string, error) {
+// detectColumnsWithTypes scans the file to detect all unique columns and their types
+func (j *jsonlHandler) detectColumnsWithTypes(filePath string) ([]storage.ColumnDef, []string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer file.Close()
 
@@ -173,11 +195,12 @@ func (j *jsonlHandler) detectColumns(filePath string) ([]string, error) {
 	scanner.Buffer(buf, maxScanTokenSize)
 
 	// Scan first N lines to detect schema (or all if limit is set)
-	maxScan := 1000
+	maxScan := 100
 	if j.limitLines > 0 && j.limitLines < maxScan {
 		maxScan = j.limitLines
 	}
 
+	var sampleRecords []map[string]string
 	scanned := 0
 	for scanner.Scan() && scanned < maxScan {
 		line := strings.TrimSpace(scanner.Text())
@@ -194,6 +217,7 @@ func (j *jsonlHandler) detectColumns(filePath string) ([]string, error) {
 		for col := range flat {
 			columnsSet[col] = struct{}{}
 		}
+		sampleRecords = append(sampleRecords, flat)
 		scanned++
 	}
 
@@ -205,10 +229,27 @@ func (j *jsonlHandler) detectColumns(filePath string) ([]string, error) {
 
 	// If no columns detected (empty file), add a placeholder column
 	if len(columns) == 0 {
-		columns = []string{"_empty"}
+		return []storage.ColumnDef{{Name: "_empty", Type: storage.TypeVarchar}}, []string{"_empty"}, nil
 	}
 
-	return columns, nil
+	// Convert sample records to [][]any for type inference
+	sampleRows := make([][]any, len(sampleRecords))
+	for i, record := range sampleRecords {
+		row := make([]any, len(columns))
+		for idx, col := range columns {
+			if val, ok := record[col]; ok {
+				row[idx] = val
+			} else {
+				row[idx] = ""
+			}
+		}
+		sampleRows[i] = row
+	}
+
+	// Infer column types
+	columnDefs := storage.InferColumnTypes(columns, sampleRows)
+
+	return columnDefs, columns, nil
 }
 
 // flattenMap flattens a nested map into a single-level map with underscore notation keys

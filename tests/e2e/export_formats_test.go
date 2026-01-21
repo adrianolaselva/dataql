@@ -84,8 +84,8 @@ func TestExport_JSON_FromJSON(t *testing.T) {
 	outputFile := tempFile(t, "json_to_json.json")
 
 	_, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "json")
 
@@ -197,7 +197,7 @@ func TestExport_JSON_EmptyResult(t *testing.T) {
 
 	_, stderr, err := runDataQL(t, "run",
 		"-f", fixture("csv/simple.csv"),
-		"-q", "SELECT * FROM simple WHERE id = 'nonexistent'",
+		"-q", "SELECT * FROM simple WHERE id = 999",
 		"-e", outputFile,
 		"-t", "json")
 
@@ -343,8 +343,8 @@ func TestExport_Excel_FromJSON(t *testing.T) {
 	outputFile := tempFile(t, "json_to_excel.xlsx")
 
 	_, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "excel")
 
@@ -401,7 +401,7 @@ func TestExport_Excel_EmptyResult(t *testing.T) {
 
 	_, stderr, err := runDataQL(t, "run",
 		"-f", fixture("csv/simple.csv"),
-		"-q", "SELECT * FROM simple WHERE id = 'nonexistent'",
+		"-q", "SELECT * FROM simple WHERE id = 999",
 		"-e", outputFile,
 		"-t", "excel")
 
@@ -468,8 +468,8 @@ func TestExport_Parquet_FromJSON(t *testing.T) {
 	outputFile := tempFile(t, "json_to_parquet.parquet")
 
 	_, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "parquet")
 
@@ -614,8 +614,8 @@ func TestExport_XML_FromJSON(t *testing.T) {
 	outputFile := tempFile(t, "json_to_xml.xml")
 
 	_, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "xml")
 
@@ -672,7 +672,7 @@ func TestExport_XML_EmptyResult(t *testing.T) {
 
 	_, stderr, err := runDataQL(t, "run",
 		"-f", fixture("csv/simple.csv"),
-		"-q", "SELECT * FROM simple WHERE id = 'nonexistent'",
+		"-q", "SELECT * FROM simple WHERE id = 999",
 		"-e", outputFile,
 		"-t", "xml")
 
@@ -796,8 +796,8 @@ func TestExport_YAML_FromJSON(t *testing.T) {
 	outputFile := tempFile(t, "json_to_yaml.yaml")
 
 	_, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "yaml")
 
@@ -854,7 +854,7 @@ func TestExport_YAML_EmptyResult(t *testing.T) {
 
 	_, stderr, err := runDataQL(t, "run",
 		"-f", fixture("csv/simple.csv"),
-		"-q", "SELECT * FROM simple WHERE id = 'nonexistent'",
+		"-q", "SELECT * FROM simple WHERE id = 999",
 		"-e", outputFile,
 		"-t", "yaml")
 

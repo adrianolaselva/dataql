@@ -30,7 +30,7 @@ func TestMultiFile_JoinBetweenFiles(t *testing.T) {
 func TestMultiFile_MixedFormatsError(t *testing.T) {
 	_, _, err := runDataQL(t, "run",
 		"-f", fixture("csv/simple.csv"),
-		"-f", fixture("json/array.json"),
+		"-f", fixture("json/people.json"),
 		"-q", "SELECT * FROM simple")
 
 	assertError(t, err)

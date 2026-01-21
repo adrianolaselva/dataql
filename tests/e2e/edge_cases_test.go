@@ -430,7 +430,7 @@ func TestEdge_MultiFile_DifferentFormats(t *testing.T) {
 	// Mixed file formats are not supported, should return an error
 	_, _, err := runDataQL(t, "run",
 		"-f", fixture("csv/simple.csv"),
-		"-f", fixture("json/array.json"),
+		"-f", fixture("json/people.json"),
 		"-q", "SELECT * FROM simple")
 
 	assertError(t, err)

@@ -81,8 +81,8 @@ func TestExport_FromJSON(t *testing.T) {
 	outputFile := tempFile(t, "from_json.csv")
 
 	_, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
-		"-q", "SELECT * FROM array",
+		"-f", fixture("json/people.json"),
+		"-q", "SELECT * FROM people",
 		"-e", outputFile,
 		"-t", "csv")
 

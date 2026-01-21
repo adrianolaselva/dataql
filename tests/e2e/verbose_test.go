@@ -21,9 +21,9 @@ func TestVerbose_CSV_Import(t *testing.T) {
 
 func TestVerbose_JSON_Import(t *testing.T) {
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
+		"-f", fixture("json/people.json"),
 		"-v",
-		"-q", "SELECT * FROM array")
+		"-q", "SELECT * FROM people")
 
 	assertNoError(t, err, stderr)
 	combined := stdout + stderr

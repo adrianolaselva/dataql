@@ -140,7 +140,7 @@ All services are initialized with consistent sample data (5 records):
 - PostgreSQL/MySQL: `test_data`, `users`, `departments` tables
 - MongoDB: `users`, `orders` collections
 - Kafka: `dataql-test-topic` with JSON messages
-- S3: `s3://dataql-test-bucket/fixtures/` (simple.csv, array.json, data.jsonl)
+- S3: `s3://dataql-test-bucket/fixtures/` (simple.csv, people.json, data.jsonl)
 - SQS: `dataql-test-queue` with JSON messages
 
 ## Infrastructure Commands
@@ -208,7 +208,7 @@ The `.env` file contains all connection URLs used by tests:
 | `DATAQL_TEST_MONGODB_URL` | MongoDB connection | `mongodb://dataql:dataql_pass@localhost:27117/dataql_test/users` |
 | `DATAQL_TEST_KAFKA_URL` | Kafka connection | `kafka://localhost:29092/dataql-test-topic` |
 | `DATAQL_TEST_S3_CSV` | S3 CSV file | `s3://dataql-test-bucket/fixtures/simple.csv` |
-| `DATAQL_TEST_S3_JSON` | S3 JSON file | `s3://dataql-test-bucket/fixtures/array.json` |
+| `DATAQL_TEST_S3_JSON` | S3 JSON file | `s3://dataql-test-bucket/fixtures/people.json` |
 | `DATAQL_TEST_S3_JSONL` | S3 JSONL file | `s3://dataql-test-bucket/fixtures/data.jsonl` |
 | `DATAQL_TEST_SQS_URL` | SQS queue URL | `sqs://http://localhost:24566/000000000000/dataql-test-queue` |
 | `AWS_ENDPOINT_URL` | LocalStack endpoint | `http://localhost:24566` |

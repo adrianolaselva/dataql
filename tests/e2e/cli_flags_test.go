@@ -19,9 +19,9 @@ func TestCLI_VerboseFlag_CSV(t *testing.T) {
 
 func TestCLI_VerboseFlag_JSON(t *testing.T) {
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
+		"-f", fixture("json/people.json"),
 		"-v",
-		"-q", "SELECT * FROM array")
+		"-q", "SELECT * FROM people")
 
 	assertNoError(t, err, stderr)
 	combined := stdout + stderr
@@ -52,7 +52,7 @@ func TestCLI_CollectionFlag_CSV(t *testing.T) {
 
 func TestCLI_CollectionFlag_JSON(t *testing.T) {
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
+		"-f", fixture("json/people.json"),
 		"-c", "json_data",
 		"-q", "SELECT * FROM json_data")
 
@@ -103,9 +103,9 @@ func TestCLI_LinesFlag_CSV(t *testing.T) {
 
 func TestCLI_LinesFlag_JSON(t *testing.T) {
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", fixture("json/array.json"),
+		"-f", fixture("json/people.json"),
 		"-l", "1",
-		"-q", "SELECT COUNT(*) as count FROM array")
+		"-q", "SELECT COUNT(*) as count FROM people")
 
 	assertNoError(t, err, stderr)
 	assertContains(t, stdout, "1")

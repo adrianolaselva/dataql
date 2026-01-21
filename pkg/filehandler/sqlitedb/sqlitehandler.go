@@ -99,15 +99,21 @@ func (h *SqliteHandler) getTables(db *sql.DB) ([]string, error) {
 
 // importTable imports a single table from source to target storage
 func (h *SqliteHandler) importTable(sourceDB *sql.DB, sourceTable, targetTable string) error {
-	// Get column info
-	columns, err := h.getTableColumns(sourceDB, sourceTable)
+	// Get column info with types
+	columnDefs, columns, err := h.getTableColumnsWithTypes(sourceDB, sourceTable)
 	if err != nil {
 		return fmt.Errorf("failed to get columns for table %s: %w", sourceTable, err)
 	}
 
-	// Build structure in target storage
-	if err := h.storage.BuildStructure(targetTable, columns); err != nil {
-		return fmt.Errorf("failed to build structure for table %s: %w", targetTable, err)
+	// Build structure in target storage with types if supported
+	if typedStorage, ok := h.storage.(storage.TypedStorage); ok {
+		if err := typedStorage.BuildStructureWithTypes(targetTable, columnDefs); err != nil {
+			return fmt.Errorf("failed to build structure with types for table %s: %w", targetTable, err)
+		}
+	} else {
+		if err := h.storage.BuildStructure(targetTable, columns); err != nil {
+			return fmt.Errorf("failed to build structure for table %s: %w", targetTable, err)
+		}
 	}
 
 	// Query all data from source table
@@ -159,14 +165,15 @@ func (h *SqliteHandler) importTable(sourceDB *sql.DB, sourceTable, targetTable s
 	return rows.Err()
 }
 
-// getTableColumns returns the column names for a table
-func (h *SqliteHandler) getTableColumns(db *sql.DB, tableName string) ([]string, error) {
+// getTableColumnsWithTypes returns the column definitions with types for a table
+func (h *SqliteHandler) getTableColumnsWithTypes(db *sql.DB, tableName string) ([]storage.ColumnDef, []string, error) {
 	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(`%s`)", tableName))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer rows.Close()
 
+	var columnDefs []storage.ColumnDef
 	var columns []string
 	for rows.Next() {
 		var cid int
@@ -174,11 +181,33 @@ func (h *SqliteHandler) getTableColumns(db *sql.DB, tableName string) ([]string,
 		var notNull, pk int
 		var dfltValue interface{}
 		if err := rows.Scan(&cid, &name, &ctype, &notNull, &dfltValue, &pk); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		columns = append(columns, name)
+		columnDefs = append(columnDefs, storage.ColumnDef{
+			Name: name,
+			Type: mapSQLiteType(ctype),
+		})
 	}
-	return columns, rows.Err()
+	return columnDefs, columns, rows.Err()
+}
+
+// mapSQLiteType maps SQLite type names to our DataType
+func mapSQLiteType(sqliteType string) storage.DataType {
+	// SQLite types are case-insensitive, so normalize to uppercase
+	upperType := strings.ToUpper(sqliteType)
+
+	// SQLite type affinity rules
+	switch {
+	case strings.Contains(upperType, "INT"):
+		return storage.TypeBigInt
+	case strings.Contains(upperType, "REAL"), strings.Contains(upperType, "FLOA"), strings.Contains(upperType, "DOUBLE"):
+		return storage.TypeDouble
+	case strings.Contains(upperType, "BOOL"):
+		return storage.TypeBoolean
+	default:
+		return storage.TypeVarchar
+	}
 }
 
 // Lines returns the number of lines imported

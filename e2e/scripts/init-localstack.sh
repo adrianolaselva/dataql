@@ -36,7 +36,7 @@ id,name,email,age
 EOF
 
 # Create sample JSON array content
-cat > /tmp/array.json << 'EOF'
+cat > /tmp/people.json << 'EOF'
 [
   {"id": 1, "name": "Alice", "email": "alice@example.com", "age": 28},
   {"id": 2, "name": "Bob", "email": "bob@example.com", "age": 35},
@@ -72,7 +72,7 @@ EOF
 # Upload files to S3
 echo "[S3] Uploading test fixtures..."
 awslocal s3 cp /tmp/simple.csv s3://dataql-test-bucket/fixtures/simple.csv
-awslocal s3 cp /tmp/array.json s3://dataql-test-bucket/fixtures/array.json
+awslocal s3 cp /tmp/people.json s3://dataql-test-bucket/fixtures/people.json
 awslocal s3 cp /tmp/data.jsonl s3://dataql-test-bucket/fixtures/data.jsonl
 awslocal s3 cp /tmp/nested.json s3://dataql-test-bucket/fixtures/nested.json
 
@@ -166,7 +166,7 @@ echo ""
 echo "Created resources:"
 echo "  - S3 Bucket: dataql-test-bucket"
 echo "    - fixtures/simple.csv"
-echo "    - fixtures/array.json"
+echo "    - fixtures/people.json"
 echo "    - fixtures/data.jsonl"
 echo "    - fixtures/nested.json"
 echo "  - SQS Queue: dataql-test-queue (5 messages)"

@@ -347,13 +347,13 @@ SELECT * FROM simple LIMIT 1
 // TestREPL_WithJSON tests REPL with JSON input
 func TestREPL_WithJSON(t *testing.T) {
 	commands := `.tables
-SELECT * FROM array LIMIT 2
+SELECT * FROM people LIMIT 2
 .quit`
 	stdout, stderr, err := runDataQLWithStdin(t, commands, "run",
-		"-f", fixture("json/array.json"))
+		"-f", fixture("json/people.json"))
 
 	assertNoError(t, err, stderr)
-	assertContains(t, stdout, "array")
+	assertContains(t, stdout, "people")
 }
 
 // TestREPL_WithMultipleFiles tests REPL with multiple input files

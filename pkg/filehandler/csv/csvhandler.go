@@ -212,56 +212,76 @@ func (c *csvHandler) loadDataFromFile(tableName string, file *os.File) error {
 	r := csv.NewReader(file)
 	r.Comma = c.delimiter
 
-	columns, err := c.readHeader(tableName, r)
+	// Read header
+	columns, err := r.Read()
 	if err != nil {
-		return fmt.Errorf("failed to load headers and build structure: %w", err)
+		return fmt.Errorf("failed to load headers: %w", err)
 	}
 
-	c.currentLine = 0
-	for {
-		err := c.readline(tableName, columns, r)
+	// Collect sample rows for type inference (up to 100 rows)
+	const sampleSize = 100
+	var sampleRows [][]any
+	var allRecords [][]string // Store all records if we need to replay
+
+	for i := 0; i < sampleSize; i++ {
+		record, err := r.Read()
 		if errors.Is(err, io.EOF) {
 			break
 		}
-
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read sample row: %w", err)
+		}
+		sampleRows = append(sampleRows, c.convertToAnyArray(record))
+		allRecords = append(allRecords, record)
+	}
+
+	// Infer column types from sample data
+	columnDefs := storage.InferColumnTypes(columns, sampleRows)
+
+	// Create table structure with inferred types if storage supports it
+	if typedStorage, ok := c.storage.(storage.TypedStorage); ok {
+		if err := typedStorage.BuildStructureWithTypes(tableName, columnDefs); err != nil {
+			return fmt.Errorf("failed to build structure with types: %w", err)
+		}
+	} else {
+		if err := c.storage.BuildStructure(tableName, columns); err != nil {
+			return fmt.Errorf("failed to build structure: %w", err)
 		}
 	}
 
-	return nil
-}
-
-// readHeader reads the header row and creates the table structure
-func (c *csvHandler) readHeader(tableName string, r *csv.Reader) ([]string, error) {
-	columns, err := r.Read()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load headers: %w", err)
+	// Insert the sample rows we already read
+	c.currentLine = 0
+	for _, record := range allRecords {
+		if c.limitLines > 0 && c.currentLine >= c.limitLines {
+			return nil
+		}
+		_ = c.bar.Add(1)
+		c.currentLine++
+		if err := c.storage.InsertRow(tableName, columns, c.convertToAnyArrayWithTypes(record, columnDefs)); err != nil {
+			return fmt.Errorf("failed to process row number %d: %w", c.currentLine, err)
+		}
 	}
 
-	if err := c.storage.BuildStructure(tableName, columns); err != nil {
-		return nil, fmt.Errorf("failed to load headers and build structure: %w", err)
-	}
+	// Continue reading the rest of the file
+	for {
+		if c.limitLines > 0 && c.currentLine >= c.limitLines {
+			break
+		}
 
-	return columns, nil
-}
+		record, err := r.Read()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read line: %w", err)
+		}
 
-// readline reads a single line from the CSV file
-func (c *csvHandler) readline(tableName string, columns []string, r *csv.Reader) error {
-	records, err := r.Read()
-	if err != nil {
-		return fmt.Errorf("failed to read line: %w", err)
-	}
+		_ = c.bar.Add(1)
+		c.currentLine++
 
-	if c.totalLines == c.currentLine {
-		return io.EOF
-	}
-
-	_ = c.bar.Add(1)
-	c.currentLine++
-
-	if err := c.storage.InsertRow(tableName, columns, c.convertToAnyArray(records)); err != nil {
-		return fmt.Errorf("failed to process row number %d: %w", c.currentLine, err)
+		if err := c.storage.InsertRow(tableName, columns, c.convertToAnyArrayWithTypes(record, columnDefs)); err != nil {
+			return fmt.Errorf("failed to process row number %d: %w", c.currentLine, err)
+		}
 	}
 
 	return nil
@@ -274,6 +294,24 @@ func (c *csvHandler) convertToAnyArray(records []string) []any {
 		values = append(values, r)
 	}
 
+	return values
+}
+
+// convertToAnyArrayWithTypes converts string array to any array, using nil for empty numeric values
+func (c *csvHandler) convertToAnyArrayWithTypes(records []string, columnDefs []storage.ColumnDef) []any {
+	values := make([]any, len(records))
+	for i, r := range records {
+		if r == "" && i < len(columnDefs) {
+			// For numeric columns, use nil instead of empty string
+			if columnDefs[i].Type == storage.TypeBigInt || columnDefs[i].Type == storage.TypeDouble {
+				values[i] = nil
+			} else {
+				values[i] = r
+			}
+		} else {
+			values[i] = r
+		}
+	}
 	return values
 }
 

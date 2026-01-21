@@ -146,7 +146,7 @@ func TestJoin_WithLimit(t *testing.T) {
 func TestJoin_CSV_And_JSON(t *testing.T) {
 	stdout, stderr, err := runDataQL(t, "run",
 		"-f", fixture("csv/simple.csv"),
-		"-f", fixture("json/array.json"),
+		"-f", fixture("json/people.json"),
 		"-q", "SELECT s.name as csv_name, a.name as json_name FROM simple s, array a WHERE s.id = a.id LIMIT 3")
 
 	// May or may not work depending on data matching

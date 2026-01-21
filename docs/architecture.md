@@ -67,7 +67,7 @@ flowchart TB
     end
 
     subgraph STORAGE["Storage Layer"]
-        SQLITE[("SQLite<br/>(in-memory or file)")]
+        DUCKDB[("DuckDB<br/>(in-memory or file)")]
     end
 
     subgraph OUTPUT["Output"]
@@ -98,7 +98,7 @@ flowchart TB
 | **File Handlers** | Format-specific data loaders (CSV, JSON, Parquet, etc.) |
 | **Database Connectors** | Direct connections to databases (PostgreSQL, MySQL, MongoDB, etc.) |
 | **Message Queues** | Peek-mode readers for SQS, Kafka (non-consuming) |
-| **Storage Layer** | SQLite database for SQL query execution |
+| **Storage Layer** | DuckDB database for SQL query execution |
 | **Output** | Result formatting and export functionality |
 
 ---
@@ -136,7 +136,7 @@ flowchart LR
         direction TB
         D1["CREATE TABLE"]
         D2["INSERT Rows"]
-        D3[("SQLite DB")]
+        D3[("DuckDB DB")]
     end
 
     subgraph QUERY["5. Query"]
@@ -173,13 +173,13 @@ flowchart LR
    - Transforms nested structures (JSON flattening)
    - Handles type conversions
 
-4. **Storage**: Data is loaded into SQLite:
+4. **Storage**: Data is loaded into DuckDB:
    - Tables created dynamically from schema
-   - All columns stored as TEXT for flexibility
+   - Column types inferred automatically (BIGINT, DOUBLE, BOOLEAN, VARCHAR)
    - Supports multiple tables for JOINs
 
-5. **Query**: SQL queries are executed against SQLite:
-   - Full SQLite SQL syntax support
+5. **Query**: SQL queries are executed against DuckDB:
+   - Full DuckDB SQL syntax support (analytical/OLAP optimized)
    - JOINs across multiple data sources
    - Aggregations, filtering, sorting
 
@@ -242,7 +242,7 @@ flowchart TB
             exp_xml["xml/, yaml/"]
         end
 
-        storage["storage/sqlite/<br/><small>SQLite operations</small>"]
+        storage["storage/duckdb/<br/><small>DuckDB operations</small>"]
         repl["repl/<br/><small>Autocomplete, highlighting</small>"]
 
         subgraph HANDLERS["*handler/"]
@@ -273,7 +273,7 @@ sequenceDiagram
     participant CLI as CLI<br/>(dataqlctl)
     participant Engine as DataQL<br/>Engine
     participant Handler as File<br/>Handler
-    participant Storage as SQLite<br/>Storage
+    participant Storage as DuckDB<br/>Storage
     participant Output as Output<br/>Formatter
 
     User->>CLI: dataql run -f data.csv -q "SELECT..."
@@ -314,11 +314,11 @@ sequenceDiagram
     participant User
     participant REPL as REPL<br/>Interface
     participant Engine as DataQL<br/>Engine
-    participant Storage as SQLite<br/>Storage
+    participant Storage as DuckDB<br/>Storage
     participant Auto as Auto-<br/>complete
 
     User->>Engine: dataql run -f data.csv
-    Engine->>Engine: Load data into SQLite
+    Engine->>Engine: Load data into DuckDB
     Engine->>REPL: initializePrompt()
 
     REPL->>Auto: RefreshSchema()
@@ -366,7 +366,7 @@ sequenceDiagram
     participant LLM as LLM<br/>(Claude, Codex, Gemini)
     participant MCP as MCP<br/>Server
     participant Engine as DataQL<br/>Engine
-    participant Storage as SQLite<br/>Storage
+    participant Storage as DuckDB<br/>Storage
 
     Note over LLM,MCP: STDIO Communication
 
@@ -422,7 +422,7 @@ DataQL employs several design patterns for maintainability and extensibility:
 | **File Handlers** | `pkg/filehandler/` | Format-specific data loading |
 | **DB Connectors** | `pkg/dbconnector/` | Database connection and queries |
 | **MQ Readers** | `pkg/mqreader/` | Message queue peek operations |
-| **SQLite Storage** | `pkg/storage/sqlite/` | SQL execution and table management |
+| **DuckDB Storage** | `pkg/storage/duckdb/` | SQL execution and table management |
 | **Export Formats** | `pkg/exportdata/` | Format-specific result export |
 | **REPL** | `pkg/repl/` | Autocomplete and syntax highlighting |
 | **Cloud Handlers** | `pkg/*handler/` | S3, GCS, Azure, URL, stdin handlers |

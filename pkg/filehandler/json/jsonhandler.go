@@ -107,9 +107,36 @@ func (j *jsonHandler) importRecords(tableName string, records []map[string]inter
 	}
 	sort.Strings(columns)
 
-	// Build table structure
-	if err := j.storage.BuildStructure(tableName, columns); err != nil {
-		return fmt.Errorf("failed to build structure: %w", err)
+	// Collect sample rows for type inference (up to 100 rows)
+	sampleSize := 100
+	if len(flattenedRecords) < sampleSize {
+		sampleSize = len(flattenedRecords)
+	}
+	sampleRows := make([][]any, sampleSize)
+	for i := 0; i < sampleSize; i++ {
+		row := make([]any, len(columns))
+		for idx, col := range columns {
+			if val, ok := flattenedRecords[i][col]; ok {
+				row[idx] = val
+			} else {
+				row[idx] = ""
+			}
+		}
+		sampleRows[i] = row
+	}
+
+	// Infer column types from sample data
+	columnDefs := storage.InferColumnTypes(columns, sampleRows)
+
+	// Build table structure with inferred types if storage supports it
+	if typedStorage, ok := j.storage.(storage.TypedStorage); ok {
+		if err := typedStorage.BuildStructureWithTypes(tableName, columnDefs); err != nil {
+			return fmt.Errorf("failed to build structure with types: %w", err)
+		}
+	} else {
+		if err := j.storage.BuildStructure(tableName, columns); err != nil {
+			return fmt.Errorf("failed to build structure: %w", err)
+		}
 	}
 
 	j.totalLines = len(flattenedRecords)
@@ -127,10 +154,15 @@ func (j *jsonHandler) importRecords(tableName string, records []map[string]inter
 
 		values := make([]any, len(columns))
 		for idx, col := range columns {
-			if val, ok := record[col]; ok {
+			if val, ok := record[col]; ok && val != "" {
 				values[idx] = val
 			} else {
-				values[idx] = ""
+				// For numeric columns, use nil instead of empty string
+				if columnDefs[idx].Type == storage.TypeBigInt || columnDefs[idx].Type == storage.TypeDouble {
+					values[idx] = nil
+				} else {
+					values[idx] = ""
+				}
 			}
 		}
 

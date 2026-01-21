@@ -46,8 +46,8 @@ func TestURL_JSONFromHTTP(t *testing.T) {
 	defer server.Close()
 
 	stdout, stderr, err := runDataQL(t, "run",
-		"-f", server.URL+"/json/array.json",
-		"-q", "SELECT COUNT(*) as count FROM array")
+		"-f", server.URL+"/json/people.json",
+		"-q", "SELECT COUNT(*) as count FROM people")
 
 	assertNoError(t, err, stderr)
 	assertContains(t, stdout, "3")

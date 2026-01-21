@@ -435,7 +435,7 @@ DataQL employs several design patterns for maintainability and extensibility:
 
 | Category | Formats |
 |----------|---------|
-| **Files** | CSV, JSON, JSONL, XML, YAML, Parquet, Excel (.xlsx, .xls), Avro, ORC, SQLite |
+| **Files** | CSV, JSON, JSONL, XML, YAML, Parquet, Excel (.xlsx, .xls), Avro, ORC, SQLite (.db) |
 | **Databases** | PostgreSQL, MySQL, DuckDB, MongoDB, DynamoDB |
 | **Cloud Storage** | Amazon S3, Google Cloud Storage, Azure Blob Storage |
 | **Message Queues** | AWS SQS, Apache Kafka (peek mode - non-consuming) |

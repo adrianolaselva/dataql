@@ -407,7 +407,7 @@ dataql run \
   -q "SELECT order_id, customer_id, total FROM orders" \
   -e orders.csv -t csv
 
-# Custom table name in SQLite
+# Custom table name
 dataql run \
   -f "dynamodb://us-east-1/my-data-table" -c my_table \
   -q "SELECT * FROM my_table LIMIT 100"
@@ -477,7 +477,7 @@ dataql run \
 
 ### Limitations
 
-1. **No native DynamoDB queries**: DataQL scans the table and loads data into SQLite
+1. **No native DynamoDB queries**: DataQL scans the table and loads data into DuckDB
 2. **Memory usage**: Large tables are fully loaded into memory
 3. **Consistent schema**: Tables with varying item structures may have missing columns
 4. **Read-only**: DataQL only reads data, doesn't write to DynamoDB

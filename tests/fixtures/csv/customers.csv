@@ -1,0 +1,6 @@
+customer_id,name,email,country,credit_limit,created_at
+101,Acme Corp,acme@example.com,USA,50000,2023-01-10
+102,TechStart Inc,tech@example.com,Canada,30000,2023-02-15
+103,Global Ltd,global@example.com,UK,75000,2023-03-20
+104,Local Shop,local@example.com,USA,15000,2023-04-25
+105,BigData Co,bigdata@example.com,Germany,100000,2023-05-30

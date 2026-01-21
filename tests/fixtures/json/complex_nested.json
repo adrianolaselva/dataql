@@ -1,0 +1,58 @@
+[
+  {
+    "id": 1,
+    "user": {
+      "name": "John Doe",
+      "email": "john@example.com",
+      "address": {
+        "street": "123 Main St",
+        "city": "New York",
+        "country": "USA"
+      }
+    },
+    "orders": [
+      {"id": 101, "total": 150.00},
+      {"id": 102, "total": 75.50}
+    ],
+    "metadata": {
+      "created": "2024-01-15",
+      "tags": ["premium", "active"]
+    }
+  },
+  {
+    "id": 2,
+    "user": {
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "address": {
+        "street": "456 Oak Ave",
+        "city": "Los Angeles",
+        "country": "USA"
+      }
+    },
+    "orders": [
+      {"id": 201, "total": 200.00}
+    ],
+    "metadata": {
+      "created": "2024-01-16",
+      "tags": ["basic"]
+    }
+  },
+  {
+    "id": 3,
+    "user": {
+      "name": "Bob Wilson",
+      "email": "bob@example.com",
+      "address": {
+        "street": "789 Pine Rd",
+        "city": "Chicago",
+        "country": "USA"
+      }
+    },
+    "orders": [],
+    "metadata": {
+      "created": "2024-01-17",
+      "tags": []
+    }
+  }
+]

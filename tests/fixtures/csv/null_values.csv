@@ -1,0 +1,8 @@
+id,name,value,status,score
+1,Item A,100,active,95.5
+2,Item B,,inactive,
+3,Item C,200,,80.0
+4,,300,pending,75.5
+5,Item E,,,
+6,Item F,0,active,0.0
+7,Item G,150,inactive,NULL

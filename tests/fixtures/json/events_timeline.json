@@ -1,0 +1,10 @@
+[
+  {"event_id": 1, "type": "login", "user_id": 101, "timestamp": "2024-01-15T08:30:00Z", "data": {"ip": "192.168.1.1", "device": "desktop"}},
+  {"event_id": 2, "type": "purchase", "user_id": 101, "timestamp": "2024-01-15T09:15:00Z", "data": {"amount": 150.00, "items": 3}},
+  {"event_id": 3, "type": "login", "user_id": 102, "timestamp": "2024-01-15T10:00:00Z", "data": {"ip": "10.0.0.5", "device": "mobile"}},
+  {"event_id": 4, "type": "logout", "user_id": 101, "timestamp": "2024-01-15T12:30:00Z", "data": {"session_duration": 14400}},
+  {"event_id": 5, "type": "purchase", "user_id": 102, "timestamp": "2024-01-15T11:45:00Z", "data": {"amount": 75.50, "items": 1}},
+  {"event_id": 6, "type": "error", "user_id": 102, "timestamp": "2024-01-15T11:46:00Z", "data": {"code": 500, "message": "Internal error"}},
+  {"event_id": 7, "type": "login", "user_id": 103, "timestamp": "2024-01-16T08:00:00Z", "data": {"ip": "172.16.0.10", "device": "tablet"}},
+  {"event_id": 8, "type": "purchase", "user_id": 103, "timestamp": "2024-01-16T14:20:00Z", "data": {"amount": 299.99, "items": 2}}
+]

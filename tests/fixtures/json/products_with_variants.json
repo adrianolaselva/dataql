@@ -1,0 +1,50 @@
+[
+  {
+    "sku": "LAPTOP-001",
+    "name": "Professional Laptop",
+    "brand": "TechBrand",
+    "specs": {
+      "cpu": "Intel i7",
+      "ram": 16,
+      "storage": 512
+    },
+    "variants": [
+      {"color": "silver", "price": 999.99, "stock": 50},
+      {"color": "black", "price": 1049.99, "stock": 30}
+    ],
+    "active": true,
+    "rating": 4.5
+  },
+  {
+    "sku": "PHONE-001",
+    "name": "Smartphone Pro",
+    "brand": "MobileCo",
+    "specs": {
+      "cpu": "A15 Bionic",
+      "ram": 8,
+      "storage": 256
+    },
+    "variants": [
+      {"color": "blue", "price": 799.99, "stock": 100},
+      {"color": "white", "price": 799.99, "stock": 75},
+      {"color": "black", "price": 849.99, "stock": 60}
+    ],
+    "active": true,
+    "rating": 4.8
+  },
+  {
+    "sku": "TABLET-001",
+    "name": "Tablet Plus",
+    "brand": "TechBrand",
+    "specs": {
+      "cpu": "M1",
+      "ram": 8,
+      "storage": 128
+    },
+    "variants": [
+      {"color": "gray", "price": 599.99, "stock": 25}
+    ],
+    "active": false,
+    "rating": 4.2
+  }
+]

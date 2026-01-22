@@ -36,6 +36,11 @@ var availableSkills = []SkillInfo{
 		Description: "Quick data inspection and simple queries",
 		Path:        "embedded/skills/dataql-quick",
 	},
+	{
+		Name:        "dataql-auto-issue",
+		Description: "Auto-create GitHub issues on errors with duplicate validation",
+		Path:        "embedded/skills/dataql-auto-issue",
+	},
 }
 
 // SkillsCtl is the interface for the skills controller
@@ -306,7 +311,7 @@ func installCommands(destDir string) error {
 	}
 
 	// List of commands to install
-	commands := []string{"dataql.md", "dataql-schema.md"}
+	commands := []string{"dataql.md", "dataql-schema.md", "dataql-issue.md"}
 
 	for _, cmdFile := range commands {
 		content, err := commandsFS.ReadFile(filepath.Join("embedded/commands", cmdFile))

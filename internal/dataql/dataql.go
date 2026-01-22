@@ -31,6 +31,7 @@ import (
 	xmlHandler "github.com/adrianolaselva/dataql/pkg/filehandler/xml"
 	yamlHandler "github.com/adrianolaselva/dataql/pkg/filehandler/yaml"
 	"github.com/adrianolaselva/dataql/pkg/gcshandler"
+	"github.com/adrianolaselva/dataql/pkg/queryerror"
 	"github.com/adrianolaselva/dataql/pkg/repl"
 	"github.com/adrianolaselva/dataql/pkg/s3handler"
 	"github.com/adrianolaselva/dataql/pkg/stdinhandler"
@@ -555,7 +556,9 @@ func (d *dataQL) executeQueryAndExport(line string) error {
 
 	rows, err := d.storage.Query(line)
 	if err != nil {
-		return fmt.Errorf("failed to execute query: %w", err)
+		// Enhance error with user-friendly hints
+		enhancedErr := queryerror.EnhanceError(err)
+		return fmt.Errorf("failed to execute query: %w", enhancedErr)
 	}
 	defer func(rows *sql.Rows) {
 		_ = rows.Close()
@@ -759,7 +762,9 @@ func (d *dataQL) executeQuery(line string) error {
 
 	rows, err := d.storage.Query(line)
 	if err != nil {
-		return fmt.Errorf("failed to execute query: %w", err)
+		// Enhance error with user-friendly hints
+		enhancedErr := queryerror.EnhanceError(err)
+		return fmt.Errorf("failed to execute query: %w", enhancedErr)
 	}
 	defer func(rows *sql.Rows) {
 		_ = rows.Close()

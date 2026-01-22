@@ -360,14 +360,18 @@ func (d *dataQL) Run() error {
 		_ = fileHandler.Close()
 	}(d.fileHandler)
 
-	verboseLog(d.params.Verbose, "Listing available tables...")
-	rows, err := d.storage.ShowTables()
-	if err != nil {
-		return fmt.Errorf("failed to list tables: %w", err)
-	}
+	// Show table schema unless --no-schema is set or a query is specified (non-REPL mode)
+	// Schema is useful in REPL mode but adds noise when running one-off queries
+	if !d.params.NoSchema && d.params.Query == "" {
+		verboseLog(d.params.Verbose, "Listing available tables...")
+		rows, err := d.storage.ShowTables()
+		if err != nil {
+			return fmt.Errorf("failed to list tables: %w", err)
+		}
 
-	if _, err := d.printResult(rows); err != nil {
-		return fmt.Errorf("failed to print tables: %w", err)
+		if _, err := d.printResult(rows); err != nil {
+			return fmt.Errorf("failed to print tables: %w", err)
+		}
 	}
 
 	return d.execute()
@@ -381,15 +385,18 @@ func (d *dataQL) RunStorageOnly() error {
 
 	verboseLog(d.params.Verbose, "Running in storage-only mode...")
 
-	// List available tables
-	verboseLog(d.params.Verbose, "Listing available tables in storage...")
-	rows, err := d.storage.ShowTables()
-	if err != nil {
-		return fmt.Errorf("failed to list tables: %w", err)
-	}
+	// Show table schema unless --no-schema is set or a query is specified (non-REPL mode)
+	// Schema is useful in REPL mode but adds noise when running one-off queries
+	if !d.params.NoSchema && d.params.Query == "" {
+		verboseLog(d.params.Verbose, "Listing available tables in storage...")
+		rows, err := d.storage.ShowTables()
+		if err != nil {
+			return fmt.Errorf("failed to list tables: %w", err)
+		}
 
-	if _, err := d.printResult(rows); err != nil {
-		return fmt.Errorf("failed to print tables: %w", err)
+		if _, err := d.printResult(rows); err != nil {
+			return fmt.Errorf("failed to print tables: %w", err)
+		}
 	}
 
 	return d.execute()

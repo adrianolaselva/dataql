@@ -93,8 +93,8 @@ func TestDetectFormatFromFiles(t *testing.T) {
 		{
 			name:     "mixed formats",
 			files:    []string{"/path/to/file.csv", "/path/to/file.json"},
-			expected: "",
-			wantErr:  true,
+			expected: filehandler.FormatMixed,
+			wantErr:  false,
 		},
 		{
 			name:     "empty list",

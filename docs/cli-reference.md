@@ -74,11 +74,13 @@ dataql run -f "https://example.com/data.csv" -q "SELECT * FROM data"
 
 ```bash
 # Pipe data from other commands
-cat data.csv | dataql run -f - -q "SELECT * FROM stdin"
+cat data.csv | dataql run -f - -q "SELECT * FROM stdin_data"
 
 # Pipe JSON
-echo '[{"a":1},{"a":2}]' | dataql run -f - -q "SELECT * FROM stdin"
+echo '[{"a":1},{"a":2}]' | dataql run -f - -i json -q "SELECT * FROM stdin_data"
 ```
+
+**Note:** When reading from stdin, the default table name is `stdin_data`. Use `-c` flag to specify a custom table name.
 
 ### Cloud Storage
 
@@ -254,7 +256,7 @@ dataql run -f "https://raw.githubusercontent.com/datasets/population/main/data/p
 ### Pipe from curl
 
 ```bash
-curl -s "https://api.example.com/data.json" | dataql run -f - -q "SELECT * FROM stdin"
+curl -s "https://api.example.com/data.json" | dataql run -f - -i json -q "SELECT * FROM stdin_data"
 ```
 
 ## SQL Reference

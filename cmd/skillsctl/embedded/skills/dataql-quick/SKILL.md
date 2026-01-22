@@ -51,8 +51,10 @@ dataql run -f products.csv -q "SELECT name, price FROM products WHERE price > 10
 
 ### Read from stdin
 ```bash
-cat data.csv | dataql run -f - -q "SELECT * FROM stdin LIMIT 5"
+cat data.csv | dataql run -f - -q "SELECT * FROM stdin_data LIMIT 5"
 ```
+
+**Note:** When reading from stdin, the default table name is `stdin_data`.
 
 ## Supported Formats
 

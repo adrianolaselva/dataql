@@ -435,7 +435,7 @@ dataql run -f "sqs://my-events-queue?region=us-east-1" \
 **Read from stdin:**
 
 ```bash
-cat data.csv | dataql run -f - -q "SELECT * FROM stdin WHERE value > 100"
+cat data.csv | dataql run -f - -q "SELECT * FROM stdin_data WHERE value > 100"
 ```
 
 ### Real-World Example

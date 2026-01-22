@@ -329,9 +329,9 @@ dataql run \
 ```bash
 # Pipe API response
 curl -s "https://api.github.com/users/octocat/repos" | \
-    dataql run -f - -q "
+    dataql run -f - -i json -q "
     SELECT name, stargazers_count, language
-    FROM stdin
+    FROM stdin_data
     WHERE language IS NOT NULL
     ORDER BY stargazers_count DESC
     LIMIT 10

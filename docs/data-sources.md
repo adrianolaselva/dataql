@@ -63,32 +63,35 @@ dataql run \
 
 ## Standard Input (stdin)
 
-Read data from stdin using `-` as the file path:
+Read data from stdin using `-` as the file path. The default table name is `stdin_data`:
 
 ```bash
 # Pipe CSV data
-cat data.csv | dataql run -f - -q "SELECT * FROM stdin"
+cat data.csv | dataql run -f - -q "SELECT * FROM stdin_data"
 
 # Pipe JSON data
-echo '[{"name":"Alice","age":30},{"name":"Bob","age":25}]' | dataql run -f - -q "SELECT * FROM stdin"
+echo '[{"name":"Alice","age":30},{"name":"Bob","age":25}]' | dataql run -f - -i json -q "SELECT * FROM stdin_data"
 
 # Combine with curl
-curl -s "https://api.example.com/data.json" | dataql run -f - -q "SELECT * FROM stdin"
+curl -s "https://api.example.com/data.json" | dataql run -f - -i json -q "SELECT * FROM stdin_data"
 
 # Process command output
-ps aux | dataql run -f - -d " " -q "SELECT * FROM stdin LIMIT 10"
+ps aux | dataql run -f - -d " " -q "SELECT * FROM stdin_data LIMIT 10"
 ```
 
 ### stdin with Different Formats
 
-The format is auto-detected from the content:
+Use the `-i` flag to specify the input format:
 
 ```bash
 # JSON from stdin
-echo '{"users":[{"name":"Alice"},{"name":"Bob"}]}' | dataql run -f - -q "SELECT * FROM stdin"
+echo '{"users":[{"name":"Alice"},{"name":"Bob"}]}' | dataql run -f - -i json -q "SELECT * FROM stdin_data"
 
 # CSV from stdin
-echo -e "id,name\n1,Alice\n2,Bob" | dataql run -f - -q "SELECT * FROM stdin"
+echo -e "id,name\n1,Alice\n2,Bob" | dataql run -f - -i csv -q "SELECT * FROM stdin_data"
+
+# Custom table name
+echo -e "id,name\n1,Alice" | dataql run -f - -c people -q "SELECT * FROM people"
 ```
 
 ## Amazon S3

@@ -150,7 +150,7 @@ dataql run -f "s3://my-bucket/data.csv" -q "SELECT * FROM data"
 dataql run -f "postgres://user:pass@localhost/db?table=users" -q "SELECT * FROM users"
 
 # Read from stdin
-cat data.csv | dataql run -f - -q "SELECT * FROM stdin"
+cat data.csv | dataql run -f - -q "SELECT * FROM stdin_data"
 
 # Export results
 dataql run -f input.csv -q "SELECT * FROM input" -e output.jsonl -t jsonl

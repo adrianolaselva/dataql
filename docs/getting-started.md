@@ -288,14 +288,16 @@ Pipe data directly to DataQL:
 
 ```bash
 # Pipe CSV data
-cat users.csv | dataql run -f - -q "SELECT * FROM stdin WHERE age > 30"
+cat users.csv | dataql run -f - -q "SELECT * FROM stdin_data WHERE age > 30"
 
 # Pipe JSON data
-echo '[{"a":1},{"a":2}]' | dataql run -f - -q "SELECT * FROM stdin"
+echo '[{"a":1},{"a":2}]' | dataql run -f - -i json -q "SELECT * FROM stdin_data"
 
 # Combine with other tools
-curl -s "https://api.example.com/data.json" | dataql run -f - -q "SELECT * FROM stdin"
+curl -s "https://api.example.com/data.json" | dataql run -f - -i json -q "SELECT * FROM stdin_data"
 ```
+
+**Note:** When reading from stdin, the default table name is `stdin_data`. Use `-c` to specify a custom table name.
 
 ## Next Steps
 

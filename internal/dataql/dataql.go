@@ -14,6 +14,7 @@ import (
 
 	"github.com/adrianolaselva/dataql/internal/exportdata"
 	"github.com/adrianolaselva/dataql/pkg/azurehandler"
+	"github.com/adrianolaselva/dataql/pkg/compressionhandler"
 	"github.com/adrianolaselva/dataql/pkg/filehandler"
 	avroHandler "github.com/adrianolaselva/dataql/pkg/filehandler/avro"
 	compositeHandler "github.com/adrianolaselva/dataql/pkg/filehandler/composite"
@@ -61,20 +62,21 @@ type DataQL interface {
 }
 
 type dataQL struct {
-	storage      storage.Storage
-	bar          *progressbar.ProgressBar
-	params       Params
-	fileHandler  filehandler.FileHandler
-	urlHandler   *urlhandler.URLHandler
-	s3Handler    *s3handler.S3Handler
-	gcsHandler   *gcshandler.GCSHandler
-	azureHandler *azurehandler.AzureHandler
-	stdinHandler *stdinhandler.StdinHandler
-	pageSize     int
-	paging       bool // Enable paging in REPL mode
-	showTiming   bool // Show query execution time
-	truncate     int  // Truncate column values longer than N characters
-	vertical     bool // Display results in vertical format
+	storage            storage.Storage
+	bar                *progressbar.ProgressBar
+	params             Params
+	fileHandler        filehandler.FileHandler
+	urlHandler         *urlhandler.URLHandler
+	s3Handler          *s3handler.S3Handler
+	gcsHandler         *gcshandler.GCSHandler
+	azureHandler       *azurehandler.AzureHandler
+	stdinHandler       *stdinhandler.StdinHandler
+	compressionHandler *compressionhandler.CompressionHandler
+	pageSize           int
+	paging             bool // Enable paging in REPL mode
+	showTiming         bool // Show query execution time
+	truncate           int  // Truncate column values longer than N characters
+	vertical           bool // Display results in vertical format
 }
 
 // verboseLog prints a message if verbose mode is enabled
@@ -173,6 +175,51 @@ func New(params Params) (DataQL, error) {
 	params.FileInputs = resolvedFiles
 	verboseLog(params.Verbose, "Resolved file inputs: %v", params.FileInputs)
 
+	// Create compression handler to decompress any compressed files
+	compressionH := compressionhandler.NewCompressionHandler()
+
+	// Check if any file inputs are compressed and decompress them
+	verboseLog(params.Verbose, "Checking for compressed files...")
+	// Save original paths before resolving (for alias mapping)
+	originalFilesBeforeDecompress := make([]string, len(params.FileInputs))
+	copy(originalFilesBeforeDecompress, params.FileInputs)
+	resolvedFiles, err = compressionH.ResolveFiles(params.FileInputs)
+	if err != nil {
+		_ = stdinH.Cleanup()
+		_ = urlH.Cleanup()
+		_ = s3H.Cleanup()
+		_ = gcsH.Cleanup()
+		_ = azureH.Cleanup()
+		_ = compressionH.Cleanup()
+		return nil, fmt.Errorf("failed to decompress files: %w", err)
+	}
+	// Update aliases map with resolved compressed paths
+	// The table name should be derived from the original file name (without compression extension)
+	for i, original := range originalFilesBeforeDecompress {
+		if original != resolvedFiles[i] {
+			// File was decompressed - use original path (minus compression extension) as alias
+			uncompressedOriginal := compressionhandler.GetUncompressedPath(original)
+			if aliases[original] != "" {
+				// User specified an explicit alias - transfer it to the decompressed path
+				aliases[resolvedFiles[i]] = aliases[original]
+				delete(aliases, original)
+				verboseLog(params.Verbose, "Compressed file %s -> decompressed %s (explicit alias: %s)", original, resolvedFiles[i], aliases[resolvedFiles[i]])
+			} else if params.Collection == "" {
+				// No explicit alias and no collection specified - derive table name from original filename
+				// e.g., "/tmp/data.csv.gz" -> "data" (will be used by formatTableName as the alias)
+				// Skip if collection is specified, as collection has priority over auto-derived aliases
+				baseNameWithExt := filepath.Base(uncompressedOriginal)                          // "data.csv"
+				tableName := strings.TrimSuffix(baseNameWithExt, filepath.Ext(baseNameWithExt)) // "data"
+				aliases[resolvedFiles[i]] = tableName
+				verboseLog(params.Verbose, "Compressed file %s -> decompressed %s (auto alias: %s)", original, resolvedFiles[i], aliases[resolvedFiles[i]])
+			} else {
+				verboseLog(params.Verbose, "Compressed file %s -> decompressed %s (using collection: %s)", original, resolvedFiles[i], params.Collection)
+			}
+		}
+	}
+	params.FileInputs = resolvedFiles
+	verboseLog(params.Verbose, "Decompressed file inputs: %v", params.FileInputs)
+
 	verboseLog(params.Verbose, "Initializing DuckDB storage...")
 	duckDBStorage, err := duckdb.NewDuckDBStorage(params.DataSourceName)
 	if err != nil {
@@ -181,6 +228,7 @@ func New(params Params) (DataQL, error) {
 		_ = s3H.Cleanup()
 		_ = gcsH.Cleanup()
 		_ = azureH.Cleanup()
+		_ = compressionH.Cleanup()
 		return nil, fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
@@ -213,23 +261,25 @@ func New(params Params) (DataQL, error) {
 		_ = s3H.Cleanup()
 		_ = gcsH.Cleanup()
 		_ = azureH.Cleanup()
+		_ = compressionH.Cleanup()
 		return nil, fmt.Errorf("failed to create file handler: %w", err)
 	}
 
 	verboseLog(params.Verbose, "DataQL initialization complete")
 	return &dataQL{
-		params:       params,
-		bar:          bar,
-		fileHandler:  handler,
-		storage:      duckDBStorage,
-		urlHandler:   urlH,
-		s3Handler:    s3H,
-		gcsHandler:   gcsH,
-		azureHandler: azureH,
-		stdinHandler: stdinH,
-		pageSize:     defaultPageSize,
-		truncate:     params.Truncate,
-		vertical:     params.Vertical,
+		params:             params,
+		bar:                bar,
+		fileHandler:        handler,
+		storage:            duckDBStorage,
+		urlHandler:         urlH,
+		s3Handler:          s3H,
+		gcsHandler:         gcsH,
+		azureHandler:       azureH,
+		stdinHandler:       stdinH,
+		compressionHandler: compressionH,
+		pageSize:           defaultPageSize,
+		truncate:           params.Truncate,
+		vertical:           params.Vertical,
 	}, nil
 }
 
@@ -479,6 +529,11 @@ func (d *dataQL) Close() error {
 	// Clean up any downloaded temp files from Azure
 	if d.azureHandler != nil {
 		_ = d.azureHandler.Cleanup()
+	}
+
+	// Clean up any decompressed temp files
+	if d.compressionHandler != nil {
+		_ = d.compressionHandler.Cleanup()
 	}
 
 	return nil

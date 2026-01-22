@@ -26,6 +26,7 @@ type xmlHandler struct {
 	limitLines  int
 	currentLine int
 	collection  string
+	aliases     map[string]string // Map of file path -> table alias
 }
 
 // NewXmlHandler creates a new XML file handler
@@ -36,6 +37,18 @@ func NewXmlHandler(fileInputs []string, bar *progressbar.ProgressBar, storage st
 		bar:        bar,
 		limitLines: limitLines,
 		collection: collection,
+	}
+}
+
+// NewXmlHandlerWithAliases creates a new XML file handler with table aliases
+func NewXmlHandlerWithAliases(fileInputs []string, bar *progressbar.ProgressBar, storage storage.Storage, limitLines int, collection string, aliases map[string]string) filehandler.FileHandler {
+	return &xmlHandler{
+		fileInputs: fileInputs,
+		storage:    storage,
+		bar:        bar,
+		limitLines: limitLines,
+		collection: collection,
+		aliases:    aliases,
 	}
 }
 
@@ -344,10 +357,21 @@ func (x *xmlHandler) sanitizeColumnName(name string) string {
 
 // formatTableName formats table name from file path
 func (x *xmlHandler) formatTableName(filePath string) string {
+	// Check if there's an alias for this file
+	if x.aliases != nil {
+		if alias, ok := x.aliases[filePath]; ok && alias != "" {
+			tableName := strings.ReplaceAll(strings.ToLower(alias), " ", "_")
+			return nonAlphanumericRegex.ReplaceAllString(tableName, "")
+		}
+	}
+
+	// Use collection if provided
 	if x.collection != "" {
 		tableName := strings.ReplaceAll(strings.ToLower(x.collection), " ", "_")
 		return nonAlphanumericRegex.ReplaceAllString(tableName, "")
 	}
+
+	// Default: use filename
 	tableName := strings.ReplaceAll(strings.ToLower(filepath.Base(filePath)), filepath.Ext(filePath), "")
 	tableName = strings.ReplaceAll(tableName, " ", "_")
 	return nonAlphanumericRegex.ReplaceAllString(tableName, "")

@@ -22,6 +22,7 @@ type orcHandler struct {
 	limitLines  int
 	currentLine int
 	collection  string
+	aliases     map[string]string // Map of file path -> table alias
 }
 
 // NewOrcHandler creates a new ORC file handler
@@ -32,6 +33,18 @@ func NewOrcHandler(files []string, bar *progressbar.ProgressBar, storage storage
 		bar:        bar,
 		limitLines: limitLines,
 		collection: collection,
+	}
+}
+
+// NewOrcHandlerWithAliases creates a new ORC file handler with table aliases
+func NewOrcHandlerWithAliases(files []string, bar *progressbar.ProgressBar, storage storage.Storage, limitLines int, collection string, aliases map[string]string) filehandler.FileHandler {
+	return &orcHandler{
+		files:      files,
+		storage:    storage,
+		bar:        bar,
+		limitLines: limitLines,
+		collection: collection,
+		aliases:    aliases,
 	}
 }
 
@@ -55,12 +68,7 @@ func (o *orcHandler) importFile(filePath string) error {
 	defer reader.Close()
 
 	// Determine collection name
-	collectionName := o.collection
-	if collectionName == "" {
-		baseName := filepath.Base(filePath)
-		collectionName = strings.TrimSuffix(baseName, filepath.Ext(baseName))
-	}
-	collectionName = o.sanitizeName(collectionName)
+	collectionName := o.formatTableName(filePath)
 
 	// Get schema
 	schema := reader.Schema()
@@ -134,6 +142,29 @@ func (o *orcHandler) sanitizeName(name string) string {
 	name = strings.ReplaceAll(name, "-", "_")
 	name = strings.ToLower(name)
 	return nonAlphanumericRegex.ReplaceAllString(name, "")
+}
+
+// formatTableName formats table name from file path
+func (o *orcHandler) formatTableName(filePath string) string {
+	// Check if there's an alias for this file
+	if o.aliases != nil {
+		if alias, ok := o.aliases[filePath]; ok && alias != "" {
+			tableName := strings.ReplaceAll(strings.ToLower(alias), " ", "_")
+			return nonAlphanumericRegex.ReplaceAllString(tableName, "")
+		}
+	}
+
+	// Use collection if provided
+	if o.collection != "" {
+		tableName := strings.ReplaceAll(strings.ToLower(o.collection), " ", "_")
+		return nonAlphanumericRegex.ReplaceAllString(tableName, "")
+	}
+
+	// Default: use filename
+	baseName := filepath.Base(filePath)
+	tableName := strings.TrimSuffix(baseName, filepath.Ext(baseName))
+	tableName = strings.ReplaceAll(strings.ToLower(tableName), " ", "_")
+	return nonAlphanumericRegex.ReplaceAllString(tableName, "")
 }
 
 // Lines returns total lines count

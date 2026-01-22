@@ -35,11 +35,17 @@ type csvHandler struct {
 	currentLine int
 	delimiter   rune
 	collection  string
+	aliases     map[string]string // Map of file path -> table alias
 }
 
 // NewCsvHandler creates a new CSV file handler
 func NewCsvHandler(fileInputs []string, delimiter rune, bar *progressbar.ProgressBar, storage storage.Storage, limitLines int, collection string) filehandler.FileHandler {
 	return &csvHandler{fileInputs: fileInputs, delimiter: delimiter, storage: storage, bar: bar, limitLines: limitLines, collection: collection}
+}
+
+// NewCsvHandlerWithAliases creates a new CSV file handler with table aliases
+func NewCsvHandlerWithAliases(fileInputs []string, delimiter rune, bar *progressbar.ProgressBar, storage storage.Storage, limitLines int, collection string, aliases map[string]string) filehandler.FileHandler {
+	return &csvHandler{fileInputs: fileInputs, delimiter: delimiter, storage: storage, bar: bar, limitLines: limitLines, collection: collection, aliases: aliases}
 }
 
 // Import imports data from CSV files
@@ -161,12 +167,23 @@ func (c *csvHandler) loadAllFiles() error {
 }
 
 // formatTableName formats table name by removing invalid characters
-// If collection is provided, it will be used as the table name
+// Priority: 1) alias from aliases map, 2) collection, 3) filename
 func (c *csvHandler) formatTableName(file *os.File) string {
+	// Check if there's an alias for this file
+	if c.aliases != nil {
+		if alias, ok := c.aliases[file.Name()]; ok && alias != "" {
+			tableName := strings.ReplaceAll(strings.ToLower(alias), " ", "_")
+			return nonAlphanumericRegex.ReplaceAllString(tableName, "")
+		}
+	}
+
+	// Use collection if provided
 	if c.collection != "" {
 		tableName := strings.ReplaceAll(strings.ToLower(c.collection), " ", "_")
 		return nonAlphanumericRegex.ReplaceAllString(tableName, "")
 	}
+
+	// Default: use filename
 	tableName := strings.ReplaceAll(strings.ToLower(filepath.Base(file.Name())), filepath.Ext(file.Name()), "")
 	tableName = strings.ReplaceAll(tableName, " ", "_")
 	return nonAlphanumericRegex.ReplaceAllString(tableName, "")

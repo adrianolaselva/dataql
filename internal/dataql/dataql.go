@@ -86,6 +86,12 @@ func New(params Params) (DataQL, error) {
 	verboseLog(params.Verbose, "Starting DataQL initialization...")
 	verboseLog(params.Verbose, "File inputs: %v", params.FileInputs)
 
+	// Parse file inputs to extract paths and aliases (e.g., "file.csv:alias")
+	fileInputs := ParseFileInputs(params.FileInputs)
+	aliases := GetAliasMap(fileInputs)
+	params.FileInputs = GetPaths(fileInputs)
+	verboseLog(params.Verbose, "Parsed aliases: %v", aliases)
+
 	// Create stdin handler to resolve any stdin inputs ("-")
 	stdinH := stdinhandler.NewStdinHandler()
 
@@ -95,6 +101,13 @@ func New(params Params) (DataQL, error) {
 	if err != nil {
 		_ = stdinH.Cleanup()
 		return nil, fmt.Errorf("failed to read stdin: %w", err)
+	}
+	// Update aliases map with resolved stdin paths
+	for i, original := range params.FileInputs {
+		if original != resolvedFiles[i] && aliases[original] != "" {
+			aliases[resolvedFiles[i]] = aliases[original]
+			delete(aliases, original)
+		}
 	}
 	params.FileInputs = resolvedFiles
 
@@ -190,7 +203,7 @@ func New(params Params) (DataQL, error) {
 		}))
 
 	verboseLog(params.Verbose, "Creating file handler...")
-	handler, err := createFileHandler(params, bar, duckDBStorage)
+	handler, err := createFileHandler(params, bar, duckDBStorage, aliases)
 	if err != nil {
 		_ = stdinH.Cleanup()
 		_ = urlH.Cleanup()
@@ -251,7 +264,7 @@ func NewStorageOnly(params Params) (DataQL, error) {
 }
 
 // createFileHandler creates the appropriate file handler based on file format
-func createFileHandler(params Params, bar *progressbar.ProgressBar, storage storage.Storage) (filehandler.FileHandler, error) {
+func createFileHandler(params Params, bar *progressbar.ProgressBar, storage storage.Storage, aliases map[string]string) (filehandler.FileHandler, error) {
 	// Detect format from file extensions
 	format, err := filehandler.DetectFormatFromFiles(params.FileInputs)
 	if err != nil {
@@ -264,31 +277,31 @@ func createFileHandler(params Params, bar *progressbar.ProgressBar, storage stor
 		if params.Delimiter != "" {
 			delimiter = rune(params.Delimiter[0])
 		}
-		return csvHandler.NewCsvHandler(params.FileInputs, delimiter, bar, storage, params.Lines, params.Collection), nil
+		return csvHandler.NewCsvHandlerWithAliases(params.FileInputs, delimiter, bar, storage, params.Lines, params.Collection, aliases), nil
 
 	case filehandler.FormatJSON:
-		return jsonHandler.NewJsonHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+		return jsonHandler.NewJsonHandlerWithAliases(params.FileInputs, bar, storage, params.Lines, params.Collection, aliases), nil
 
 	case filehandler.FormatJSONL:
-		return jsonlHandler.NewJsonlHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+		return jsonlHandler.NewJsonlHandlerWithAliases(params.FileInputs, bar, storage, params.Lines, params.Collection, aliases), nil
 
 	case filehandler.FormatXML:
-		return xmlHandler.NewXmlHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+		return xmlHandler.NewXmlHandlerWithAliases(params.FileInputs, bar, storage, params.Lines, params.Collection, aliases), nil
 
 	case filehandler.FormatExcel:
-		return excelHandler.NewExcelHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+		return excelHandler.NewExcelHandlerWithAliases(params.FileInputs, bar, storage, params.Lines, params.Collection, aliases), nil
 
 	case filehandler.FormatParquet:
-		return parquetHandler.NewParquetHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+		return parquetHandler.NewParquetHandlerWithAliases(params.FileInputs, bar, storage, params.Lines, params.Collection, aliases), nil
 
 	case filehandler.FormatYAML:
-		return yamlHandler.NewYamlHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+		return yamlHandler.NewYamlHandlerWithAliases(params.FileInputs, bar, storage, params.Lines, params.Collection, aliases), nil
 
 	case filehandler.FormatAVRO:
-		return avroHandler.NewAvroHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+		return avroHandler.NewAvroHandlerWithAliases(params.FileInputs, bar, storage, params.Lines, params.Collection, aliases), nil
 
 	case filehandler.FormatORC:
-		return orcHandler.NewOrcHandler(params.FileInputs, bar, storage, params.Lines, params.Collection), nil
+		return orcHandler.NewOrcHandlerWithAliases(params.FileInputs, bar, storage, params.Lines, params.Collection, aliases), nil
 
 	case filehandler.FormatPostgres, filehandler.FormatMySQL, filehandler.FormatDuckDB:
 		if len(params.FileInputs) != 1 {
@@ -338,7 +351,7 @@ func createFileHandler(params Params, bar *progressbar.ProgressBar, storage stor
 		if params.Delimiter != "" {
 			delimiter = rune(params.Delimiter[0])
 		}
-		return compositeHandler.NewCompositeHandler(params.FileInputs, delimiter, bar, storage, params.Lines, params.Collection)
+		return compositeHandler.NewCompositeHandlerWithAliases(params.FileInputs, delimiter, bar, storage, params.Lines, params.Collection, aliases)
 
 	default:
 		return nil, fmt.Errorf("unsupported file format: %s", format)

@@ -28,6 +28,8 @@ const (
 	verboseShortParam       = "v"
 	inputFormatParam        = "input-format"
 	inputFormatShortParam   = "i"
+	quietParam              = "quiet"
+	quietShortParam         = "Q"
 )
 
 // DataQlCtl is the interface for the dataql controller
@@ -94,6 +96,10 @@ func (c *dataQlCtl) Command() (*cobra.Command, error) {
 	command.
 		PersistentFlags().
 		StringVarP(&c.params.InputFormat, inputFormatParam, inputFormatShortParam, "csv", "input format when using stdin (csv, json, jsonl, xml, yaml)")
+
+	command.
+		PersistentFlags().
+		BoolVarP(&c.params.Quiet, quietParam, quietShortParam, false, "suppress progress bar output (useful for pipelines)")
 
 	// Note: file flag is no longer required if storage flag points to existing DuckDB file
 	// Validation is done in runE to allow querying existing DuckDB files

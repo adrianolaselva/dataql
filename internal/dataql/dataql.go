@@ -73,6 +73,8 @@ type dataQL struct {
 	pageSize     int
 	paging       bool // Enable paging in REPL mode
 	showTiming   bool // Show query execution time
+	truncate     int  // Truncate column values longer than N characters
+	vertical     bool // Display results in vertical format
 }
 
 // verboseLog prints a message if verbose mode is enabled
@@ -215,7 +217,20 @@ func New(params Params) (DataQL, error) {
 	}
 
 	verboseLog(params.Verbose, "DataQL initialization complete")
-	return &dataQL{params: params, bar: bar, fileHandler: handler, storage: duckDBStorage, urlHandler: urlH, s3Handler: s3H, gcsHandler: gcsH, azureHandler: azureH, stdinHandler: stdinH, pageSize: defaultPageSize}, nil
+	return &dataQL{
+		params:       params,
+		bar:          bar,
+		fileHandler:  handler,
+		storage:      duckDBStorage,
+		urlHandler:   urlH,
+		s3Handler:    s3H,
+		gcsHandler:   gcsH,
+		azureHandler: azureH,
+		stdinHandler: stdinH,
+		pageSize:     defaultPageSize,
+		truncate:     params.Truncate,
+		vertical:     params.Vertical,
+	}, nil
 }
 
 // NewStorageOnly creates a DataQL instance that only uses an existing DuckDB storage file
@@ -261,6 +276,8 @@ func NewStorageOnly(params Params) (DataQL, error) {
 		bar:      bar,
 		storage:  duckDBStorage,
 		pageSize: defaultPageSize,
+		truncate: params.Truncate,
+		vertical: params.Vertical,
 	}, nil
 }
 
@@ -684,6 +701,48 @@ func (d *dataQL) handleREPLCommand(line string) (bool, error) {
 		}
 		tableName := parts[1]
 		return true, d.countTable(tableName)
+
+	case ".truncate":
+		if len(parts) < 2 {
+			if d.truncate > 0 {
+				fmt.Printf("Truncation is enabled at %d characters\n", d.truncate)
+			} else {
+				fmt.Println("Truncation is disabled (0)")
+			}
+			return true, nil
+		}
+		size, err := strconv.Atoi(parts[1])
+		if err != nil || size < 0 {
+			return true, fmt.Errorf("invalid truncate value: %s (must be a non-negative integer, 0 to disable)", parts[1])
+		}
+		d.truncate = size
+		if size > 0 {
+			fmt.Printf("Truncation set to %d characters\n", size)
+		} else {
+			fmt.Println("Truncation disabled")
+		}
+		return true, nil
+
+	case ".vertical", "\\g":
+		if len(parts) < 2 {
+			status := "off"
+			if d.vertical {
+				status = "on"
+			}
+			fmt.Printf("Vertical display is %s\n", status)
+			return true, nil
+		}
+		switch strings.ToLower(parts[1]) {
+		case "on", "true", "1":
+			d.vertical = true
+			fmt.Println("Vertical display enabled")
+		case "off", "false", "0":
+			d.vertical = false
+			fmt.Println("Vertical display disabled")
+		default:
+			return true, fmt.Errorf("invalid vertical value: %s (use on/off)", parts[1])
+		}
+		return true, nil
 	}
 
 	return false, nil // Not a REPL command, should be executed as SQL
@@ -703,6 +762,8 @@ DataQL REPL Commands:
   .paging [on|off]     Enable/disable result pagination
   .pagesize [n]        Set/show page size (default: 25)
   .timing [on|off]     Enable/disable query timing display
+  .truncate [n]        Truncate columns at n chars (0 to disable)
+  .vertical [on|off], \G  Toggle vertical display (like MySQL \G)
 
 SQL Examples:
   SELECT * FROM <table>
@@ -798,6 +859,11 @@ func (d *dataQL) printResult(rows *sql.Rows) (int, error) {
 
 	_ = d.bar.Clear()
 
+	// Vertical display mode (like MySQL \G)
+	if d.vertical {
+		return d.printVerticalRows(rows, columns)
+	}
+
 	// If paging is disabled, print all results at once
 	if !d.paging {
 		return d.printAllRows(rows, columns, cols)
@@ -805,6 +871,74 @@ func (d *dataQL) printResult(rows *sql.Rows) (int, error) {
 
 	// Paging enabled: print page by page
 	return d.printPaginatedRows(rows, columns, cols)
+}
+
+// truncateValue truncates a value to the specified length if truncation is enabled
+func (d *dataQL) truncateValue(value interface{}) interface{} {
+	if d.truncate <= 0 {
+		return value
+	}
+
+	str := fmt.Sprintf("%v", value)
+	if len(str) > d.truncate {
+		return str[:d.truncate-3] + "..."
+	}
+	return value
+}
+
+// truncateValues applies truncation to all values in a slice
+func (d *dataQL) truncateValues(values []interface{}) []interface{} {
+	if d.truncate <= 0 {
+		return values
+	}
+
+	result := make([]interface{}, len(values))
+	for i, v := range values {
+		result[i] = d.truncateValue(v)
+	}
+	return result
+}
+
+// printVerticalRows prints rows in vertical format (like MySQL \G)
+func (d *dataQL) printVerticalRows(rows *sql.Rows, columns []string) (int, error) {
+	// Find the longest column name for alignment
+	maxColLen := 0
+	for _, col := range columns {
+		if len(col) > maxColLen {
+			maxColLen = len(col)
+		}
+	}
+
+	rowCount := 0
+	colColor := color.New(color.FgCyan)
+	valColor := color.New(color.FgWhite)
+	headerColor := color.New(color.FgGreen, color.Bold)
+
+	for rows.Next() {
+		rowCount++
+
+		values := make([]interface{}, len(columns))
+		pointers := make([]interface{}, len(columns))
+		for i := range values {
+			pointers[i] = &values[i]
+		}
+
+		if err := rows.Scan(pointers...); err != nil {
+			return rowCount, fmt.Errorf("failed to read row: %w", err)
+		}
+
+		// Print row separator
+		headerColor.Printf("*************************** %d. row ***************************\n", rowCount)
+
+		// Print each column as key-value pair
+		for i, col := range columns {
+			val := d.truncateValue(values[i])
+			colColor.Printf("%*s: ", maxColLen, col)
+			valColor.Printf("%v\n", val)
+		}
+	}
+
+	return rowCount, nil
 }
 
 // printAllRows prints all rows without pagination
@@ -826,7 +960,8 @@ func (d *dataQL) printAllRows(rows *sql.Rows, columns []string, cols []interface
 			return rowCount, fmt.Errorf("failed to read row: %w", err)
 		}
 
-		tbl.AddRow(values...)
+		// Apply truncation if enabled
+		tbl.AddRow(d.truncateValues(values)...)
 		rowCount++
 	}
 
@@ -855,7 +990,7 @@ func (d *dataQL) printPaginatedRows(rows *sql.Rows, columns []string, cols []int
 
 		// First, add the pending row if we have one
 		if pendingRow != nil {
-			tbl.AddRow(pendingRow...)
+			tbl.AddRow(d.truncateValues(pendingRow)...)
 			rowCount++
 			pageRows++
 		}
@@ -872,7 +1007,8 @@ func (d *dataQL) printPaginatedRows(rows *sql.Rows, columns []string, cols []int
 				return rowCount, fmt.Errorf("failed to read row: %w", err)
 			}
 
-			tbl.AddRow(values...)
+			// Apply truncation if enabled
+			tbl.AddRow(d.truncateValues(values)...)
 			rowCount++
 			pageRows++
 		}

@@ -31,6 +31,10 @@ const (
 	quietParam              = "quiet"
 	quietShortParam         = "Q"
 	noSchemaParam           = "no-schema"
+	truncateParam           = "truncate"
+	truncateShortParam      = "T"
+	verticalParam           = "vertical"
+	verticalShortParam      = "G"
 )
 
 // DataQlCtl is the interface for the dataql controller
@@ -105,6 +109,14 @@ func (c *dataQlCtl) Command() (*cobra.Command, error) {
 	command.
 		PersistentFlags().
 		BoolVar(&c.params.NoSchema, noSchemaParam, false, "suppress table schema display before query results")
+
+	command.
+		PersistentFlags().
+		IntVarP(&c.params.Truncate, truncateParam, truncateShortParam, 0, "truncate column values longer than N characters (0 = no truncation)")
+
+	command.
+		PersistentFlags().
+		BoolVarP(&c.params.Vertical, verticalParam, verticalShortParam, false, "display results in vertical format (like MySQL \\G)")
 
 	// Note: file flag is no longer required if storage flag points to existing DuckDB file
 	// Validation is done in runE to allow querying existing DuckDB files

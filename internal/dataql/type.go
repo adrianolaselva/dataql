@@ -13,6 +13,8 @@ type Params struct {
 	Quiet          bool   // Suppress progress bar output
 	NoSchema       bool   // Suppress table schema display before query results
 	InputFormat    string // Input format for stdin (csv, json, jsonl, xml, yaml)
+	Truncate       int    // Truncate column values longer than N characters (0 = no truncation)
+	Vertical       bool   // Display results in vertical format (like MySQL \G)
 }
 
 // FileInput represents a file path with an optional table alias

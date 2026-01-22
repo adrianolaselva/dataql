@@ -7,8 +7,10 @@ import (
 	"github.com/adrianolaselva/dataql/pkg/exportdata"
 	"github.com/adrianolaselva/dataql/pkg/exportdata/csv"
 	"github.com/adrianolaselva/dataql/pkg/exportdata/excel"
+	"github.com/adrianolaselva/dataql/pkg/exportdata/html"
 	"github.com/adrianolaselva/dataql/pkg/exportdata/json"
 	"github.com/adrianolaselva/dataql/pkg/exportdata/jsonl"
+	"github.com/adrianolaselva/dataql/pkg/exportdata/markdown"
 	"github.com/adrianolaselva/dataql/pkg/exportdata/parquet"
 	"github.com/adrianolaselva/dataql/pkg/exportdata/xml"
 	exportyaml "github.com/adrianolaselva/dataql/pkg/exportdata/yaml"
@@ -16,15 +18,18 @@ import (
 )
 
 const (
-	CSVLineExportType   = "csv"
-	JSONLineExportType  = "jsonl"
-	JSONExportType      = "json"
-	ExcelExportType     = "excel"
-	ExcelXLSXExportType = "xlsx"
-	ParquetExportType   = "parquet"
-	XMLExportType       = "xml"
-	YAMLExportType      = "yaml"
-	YMLExportType       = "yml"
+	CSVLineExportType    = "csv"
+	JSONLineExportType   = "jsonl"
+	JSONExportType       = "json"
+	ExcelExportType      = "excel"
+	ExcelXLSXExportType  = "xlsx"
+	ParquetExportType    = "parquet"
+	XMLExportType        = "xml"
+	YAMLExportType       = "yaml"
+	YMLExportType        = "yml"
+	MarkdownExportType   = "markdown"
+	MarkdownMDExportType = "md"
+	HTMLExportType       = "html"
 )
 
 func NewExport(exportType string, rows *sql.Rows, exportPath string, bar *progressbar.ProgressBar) (exportdata.Export, error) {
@@ -43,6 +48,10 @@ func NewExport(exportType string, rows *sql.Rows, exportPath string, bar *progre
 		return xml.NewXmlExport(rows, exportPath, bar), nil
 	case YAMLExportType, YMLExportType:
 		return exportyaml.NewYamlExport(rows, exportPath, bar), nil
+	case MarkdownExportType, MarkdownMDExportType:
+		return markdown.NewMarkdownExport(rows, exportPath, bar), nil
+	case HTMLExportType:
+		return html.NewHTMLExport(rows, exportPath, bar), nil
 	}
 
 	return nil, fmt.Errorf("export type %s not defined", exportType)

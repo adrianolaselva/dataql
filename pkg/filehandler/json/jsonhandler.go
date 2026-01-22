@@ -25,6 +25,7 @@ type jsonHandler struct {
 	limitLines  int
 	currentLine int
 	collection  string
+	aliases     map[string]string // Map of file path -> table alias
 }
 
 // NewJsonHandler creates a new JSON file handler
@@ -35,6 +36,18 @@ func NewJsonHandler(fileInputs []string, bar *progressbar.ProgressBar, storage s
 		bar:        bar,
 		limitLines: limitLines,
 		collection: collection,
+	}
+}
+
+// NewJsonHandlerWithAliases creates a new JSON file handler with table aliases
+func NewJsonHandlerWithAliases(fileInputs []string, bar *progressbar.ProgressBar, storage storage.Storage, limitLines int, collection string, aliases map[string]string) filehandler.FileHandler {
+	return &jsonHandler{
+		fileInputs: fileInputs,
+		storage:    storage,
+		bar:        bar,
+		limitLines: limitLines,
+		collection: collection,
+		aliases:    aliases,
 	}
 }
 
@@ -245,10 +258,21 @@ func (j *jsonHandler) sanitizeColumnName(name string) string {
 
 // formatTableName formats table name from file path
 func (j *jsonHandler) formatTableName(filePath string) string {
+	// Check if there's an alias for this file
+	if j.aliases != nil {
+		if alias, ok := j.aliases[filePath]; ok && alias != "" {
+			tableName := strings.ReplaceAll(strings.ToLower(alias), " ", "_")
+			return nonAlphanumericRegex.ReplaceAllString(tableName, "")
+		}
+	}
+
+	// Use collection if provided
 	if j.collection != "" {
 		tableName := strings.ReplaceAll(strings.ToLower(j.collection), " ", "_")
 		return nonAlphanumericRegex.ReplaceAllString(tableName, "")
 	}
+
+	// Default: use filename
 	tableName := strings.ReplaceAll(strings.ToLower(filepath.Base(filePath)), filepath.Ext(filePath), "")
 	tableName = strings.ReplaceAll(tableName, " ", "_")
 	return nonAlphanumericRegex.ReplaceAllString(tableName, "")

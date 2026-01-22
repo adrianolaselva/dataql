@@ -462,3 +462,80 @@ func TestCLI_MultipleFileInputs_ShowTables(t *testing.T) {
 	assertContains(t, stdout, "simple")
 	assertContains(t, stdout, "users")
 }
+
+// TestCLI_TableAlias tests the table alias feature (file.csv:alias)
+func TestCLI_TableAlias_SingleFile(t *testing.T) {
+	stdout, stderr, err := runDataQL(t, "run",
+		"-f", fixture("csv/simple.csv")+":my_alias",
+		"-q", "SELECT * FROM my_alias")
+
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "John")
+	assertContains(t, stdout, "rows)")
+}
+
+func TestCLI_TableAlias_MultipleFiles(t *testing.T) {
+	stdout, stderr, err := runDataQL(t, "run",
+		"-f", fixture("csv/simple.csv")+":people",
+		"-f", fixture("csv/users.csv")+":accounts",
+		"-q", "SELECT COUNT(*) as count FROM people")
+
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "3")
+}
+
+func TestCLI_TableAlias_ShowTables(t *testing.T) {
+	commands := `.tables
+.quit`
+	stdout, stderr, err := runDataQLWithStdin(t, commands, "run",
+		"-f", fixture("csv/simple.csv")+":custom_table",
+		"-f", fixture("csv/users.csv")+":user_data")
+
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "custom_table")
+	assertContains(t, stdout, "user_data")
+}
+
+func TestCLI_TableAlias_WithUnderscore(t *testing.T) {
+	stdout, stderr, err := runDataQL(t, "run",
+		"-f", fixture("csv/simple.csv")+":my_custom_table_name",
+		"-q", "SELECT * FROM my_custom_table_name")
+
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "John")
+}
+
+func TestCLI_TableAlias_JSON(t *testing.T) {
+	stdout, stderr, err := runDataQL(t, "run",
+		"-f", fixture("json/people.json")+":json_alias",
+		"-q", "SELECT * FROM json_alias")
+
+	assertNoError(t, err, stderr)
+	// Verify the query worked by checking data is returned
+	assertContains(t, stdout, "Alice")
+	assertContains(t, stdout, "rows)")
+}
+
+func TestCLI_TableAlias_Mixed_WithAndWithout(t *testing.T) {
+	// One file with alias, one without
+	commands := `.tables
+.quit`
+	stdout, stderr, err := runDataQLWithStdin(t, commands, "run",
+		"-f", fixture("csv/simple.csv")+":aliased_table",
+		"-f", fixture("csv/users.csv"))
+
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "aliased_table")
+	assertContains(t, stdout, "users") // Default table name from filename
+}
+
+func TestCLI_TableAlias_QueryJoinTwoAliases(t *testing.T) {
+	stdout, stderr, err := runDataQL(t, "run",
+		"-f", fixture("csv/simple.csv")+":table_a",
+		"-f", fixture("csv/users.csv")+":table_b",
+		"-q", "SELECT (SELECT COUNT(*) FROM table_a) as count_a, (SELECT COUNT(*) FROM table_b) as count_b")
+
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "count_a")
+	assertContains(t, stdout, "count_b")
+}

@@ -24,6 +24,7 @@ type yamlHandler struct {
 	limitLines  int
 	currentLine int
 	collection  string
+	aliases     map[string]string // Map of file path -> table alias
 }
 
 // NewYamlHandler creates a new YAML file handler
@@ -34,6 +35,18 @@ func NewYamlHandler(files []string, bar *progressbar.ProgressBar, storage storag
 		bar:        bar,
 		limitLines: limitLines,
 		collection: collection,
+	}
+}
+
+// NewYamlHandlerWithAliases creates a new YAML file handler with table aliases
+func NewYamlHandlerWithAliases(files []string, bar *progressbar.ProgressBar, storage storage.Storage, limitLines int, collection string, aliases map[string]string) filehandler.FileHandler {
+	return &yamlHandler{
+		files:      files,
+		storage:    storage,
+		bar:        bar,
+		limitLines: limitLines,
+		collection: collection,
+		aliases:    aliases,
 	}
 }
 
@@ -55,12 +68,7 @@ func (y *yamlHandler) importFile(filePath string) error {
 	}
 
 	// Determine collection name
-	collectionName := y.collection
-	if collectionName == "" {
-		baseName := filepath.Base(filePath)
-		collectionName = strings.TrimSuffix(baseName, filepath.Ext(baseName))
-	}
-	collectionName = y.sanitizeName(collectionName)
+	collectionName := y.formatTableName(filePath)
 
 	// Parse YAML
 	var data interface{}
@@ -232,6 +240,29 @@ func (y *yamlHandler) flattenMap(data map[string]interface{}, prefix string) map
 	}
 
 	return result
+}
+
+// formatTableName formats table name from file path
+func (y *yamlHandler) formatTableName(filePath string) string {
+	// Check if there's an alias for this file
+	if y.aliases != nil {
+		if alias, ok := y.aliases[filePath]; ok && alias != "" {
+			tableName := strings.ReplaceAll(strings.ToLower(alias), " ", "_")
+			return nonAlphanumericRegex.ReplaceAllString(tableName, "")
+		}
+	}
+
+	// Use collection if provided
+	if y.collection != "" {
+		tableName := strings.ReplaceAll(strings.ToLower(y.collection), " ", "_")
+		return nonAlphanumericRegex.ReplaceAllString(tableName, "")
+	}
+
+	// Default: use filename
+	baseName := filepath.Base(filePath)
+	tableName := strings.TrimSuffix(baseName, filepath.Ext(baseName))
+	tableName = strings.ReplaceAll(strings.ToLower(tableName), " ", "_")
+	return nonAlphanumericRegex.ReplaceAllString(tableName, "")
 }
 
 // sanitizeName sanitizes a string to be used as a SQL identifier

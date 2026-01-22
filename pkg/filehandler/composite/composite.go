@@ -74,6 +74,59 @@ func NewCompositeHandler(
 	}, nil
 }
 
+// NewCompositeHandlerWithAliases creates a new composite handler for files with mixed formats and table aliases
+func NewCompositeHandlerWithAliases(
+	files []string,
+	delimiter rune,
+	bar *progressbar.ProgressBar,
+	storage storage.Storage,
+	limitLines int,
+	collection string,
+	aliases map[string]string,
+) (*CompositeHandler, error) {
+	// Group files by format
+	filesByFormat, err := filehandler.GroupFilesByFormat(files)
+	if err != nil {
+		return nil, err
+	}
+
+	var handlers []filehandler.FileHandler
+
+	// Create appropriate handler for each format group
+	for format, formatFiles := range filesByFormat {
+		var handler filehandler.FileHandler
+
+		switch format {
+		case filehandler.FormatCSV:
+			handler = csvHandler.NewCsvHandlerWithAliases(formatFiles, delimiter, bar, storage, limitLines, collection, aliases)
+		case filehandler.FormatJSON:
+			handler = jsonHandler.NewJsonHandlerWithAliases(formatFiles, bar, storage, limitLines, collection, aliases)
+		case filehandler.FormatJSONL:
+			handler = jsonlHandler.NewJsonlHandlerWithAliases(formatFiles, bar, storage, limitLines, collection, aliases)
+		case filehandler.FormatXML:
+			handler = xmlHandler.NewXmlHandlerWithAliases(formatFiles, bar, storage, limitLines, collection, aliases)
+		case filehandler.FormatExcel:
+			handler = excelHandler.NewExcelHandlerWithAliases(formatFiles, bar, storage, limitLines, collection, aliases)
+		case filehandler.FormatParquet:
+			handler = parquetHandler.NewParquetHandlerWithAliases(formatFiles, bar, storage, limitLines, collection, aliases)
+		case filehandler.FormatYAML:
+			handler = yamlHandler.NewYamlHandlerWithAliases(formatFiles, bar, storage, limitLines, collection, aliases)
+		case filehandler.FormatAVRO:
+			handler = avroHandler.NewAvroHandlerWithAliases(formatFiles, bar, storage, limitLines, collection, aliases)
+		case filehandler.FormatORC:
+			handler = orcHandler.NewOrcHandlerWithAliases(formatFiles, bar, storage, limitLines, collection, aliases)
+		}
+
+		if handler != nil {
+			handlers = append(handlers, handler)
+		}
+	}
+
+	return &CompositeHandler{
+		handlers: handlers,
+	}, nil
+}
+
 // Import imports data from all handlers
 func (h *CompositeHandler) Import() error {
 	h.totalLines = 0

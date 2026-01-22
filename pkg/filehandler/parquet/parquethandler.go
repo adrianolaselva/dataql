@@ -23,6 +23,7 @@ type parquetHandler struct {
 	limitLines  int
 	currentLine int
 	collection  string
+	aliases     map[string]string // Map of file path -> table alias
 }
 
 // NewParquetHandler creates a new Parquet file handler
@@ -33,6 +34,18 @@ func NewParquetHandler(fileInputs []string, bar *progressbar.ProgressBar, storag
 		bar:        bar,
 		limitLines: limitLines,
 		collection: collection,
+	}
+}
+
+// NewParquetHandlerWithAliases creates a new Parquet file handler with table aliases
+func NewParquetHandlerWithAliases(fileInputs []string, bar *progressbar.ProgressBar, storage storage.Storage, limitLines int, collection string, aliases map[string]string) filehandler.FileHandler {
+	return &parquetHandler{
+		fileInputs: fileInputs,
+		storage:    storage,
+		bar:        bar,
+		limitLines: limitLines,
+		collection: collection,
+		aliases:    aliases,
 	}
 }
 
@@ -155,10 +168,21 @@ func (p *parquetHandler) sanitizeColumnName(name string) string {
 
 // formatTableName formats table name from file path
 func (p *parquetHandler) formatTableName(filePath string) string {
+	// Check if there's an alias for this file
+	if p.aliases != nil {
+		if alias, ok := p.aliases[filePath]; ok && alias != "" {
+			tableName := strings.ReplaceAll(strings.ToLower(alias), " ", "_")
+			return nonAlphanumericRegex.ReplaceAllString(tableName, "")
+		}
+	}
+
+	// Use collection if provided
 	if p.collection != "" {
 		tableName := strings.ReplaceAll(strings.ToLower(p.collection), " ", "_")
 		return nonAlphanumericRegex.ReplaceAllString(tableName, "")
 	}
+
+	// Default: use filename
 	tableName := strings.ReplaceAll(strings.ToLower(filepath.Base(filePath)), filepath.Ext(filePath), "")
 	tableName = strings.ReplaceAll(tableName, " ", "_")
 	return nonAlphanumericRegex.ReplaceAllString(tableName, "")

@@ -10,5 +10,6 @@ type Params struct {
 	Lines          int
 	Collection     string
 	Verbose        bool
+	Quiet          bool   // Suppress progress bar output
 	InputFormat    string // Input format for stdin (csv, json, jsonl, xml, yaml)
 }

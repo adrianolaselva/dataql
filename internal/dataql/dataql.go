@@ -168,8 +168,15 @@ func New(params Params) (DataQL, error) {
 		return nil, fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
+	// Use stderr for progress bar to keep stdout clean for pipelines
+	// Use io.Discard if quiet mode is enabled
+	var barWriter io.Writer = os.Stderr
+	if params.Quiet {
+		barWriter = io.Discard
+	}
+
 	bar := progressbar.NewOptions(0,
-		progressbar.OptionSetWriter(os.Stdout),
+		progressbar.OptionSetWriter(barWriter),
 		progressbar.OptionEnableColorCodes(true),
 		progressbar.OptionShowBytes(true),
 		progressbar.OptionFullWidth(),
@@ -213,8 +220,15 @@ func NewStorageOnly(params Params) (DataQL, error) {
 		return nil, fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
+	// Use stderr for progress bar to keep stdout clean for pipelines
+	// Use io.Discard if quiet mode is enabled
+	var barWriter io.Writer = os.Stderr
+	if params.Quiet {
+		barWriter = io.Discard
+	}
+
 	bar := progressbar.NewOptions(0,
-		progressbar.OptionSetWriter(os.Stdout),
+		progressbar.OptionSetWriter(barWriter),
 		progressbar.OptionEnableColorCodes(true),
 		progressbar.OptionShowBytes(true),
 		progressbar.OptionFullWidth(),

@@ -11,5 +11,6 @@ type Params struct {
 	Collection     string
 	Verbose        bool
 	Quiet          bool   // Suppress progress bar output
+	NoSchema       bool   // Suppress table schema display before query results
 	InputFormat    string // Input format for stdin (csv, json, jsonl, xml, yaml)
 }

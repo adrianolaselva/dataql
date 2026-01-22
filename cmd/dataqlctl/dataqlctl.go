@@ -30,6 +30,7 @@ const (
 	inputFormatShortParam   = "i"
 	quietParam              = "quiet"
 	quietShortParam         = "Q"
+	noSchemaParam           = "no-schema"
 )
 
 // DataQlCtl is the interface for the dataql controller
@@ -100,6 +101,10 @@ func (c *dataQlCtl) Command() (*cobra.Command, error) {
 	command.
 		PersistentFlags().
 		BoolVarP(&c.params.Quiet, quietParam, quietShortParam, false, "suppress progress bar output (useful for pipelines)")
+
+	command.
+		PersistentFlags().
+		BoolVar(&c.params.NoSchema, noSchemaParam, false, "suppress table schema display before query results")
 
 	// Note: file flag is no longer required if storage flag points to existing DuckDB file
 	// Validation is done in runE to allow querying existing DuckDB files

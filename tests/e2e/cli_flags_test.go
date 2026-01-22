@@ -40,6 +40,8 @@ func TestCLI_VerboseFlag_ShowsFileInputs(t *testing.T) {
 }
 
 // TestCLI_CollectionFlag tests the -c collection flag
+// These tests verify that custom table names work by checking that queries succeed
+// and return expected data (the table name itself is not displayed in query mode)
 func TestCLI_CollectionFlag_CSV(t *testing.T) {
 	stdout, stderr, err := runDataQL(t, "run",
 		"-f", fixture("csv/simple.csv"),
@@ -47,7 +49,9 @@ func TestCLI_CollectionFlag_CSV(t *testing.T) {
 		"-q", "SELECT * FROM my_custom_table")
 
 	assertNoError(t, err, stderr)
-	assertContains(t, stdout, "my_custom_table")
+	// Verify the query worked by checking data is returned
+	assertContains(t, stdout, "John")
+	assertContains(t, stdout, "rows)")
 }
 
 func TestCLI_CollectionFlag_JSON(t *testing.T) {
@@ -57,7 +61,8 @@ func TestCLI_CollectionFlag_JSON(t *testing.T) {
 		"-q", "SELECT * FROM json_data")
 
 	assertNoError(t, err, stderr)
-	assertContains(t, stdout, "json_data")
+	// Verify the query worked by checking data is returned
+	assertContains(t, stdout, "rows)")
 }
 
 func TestCLI_CollectionFlag_JSONL(t *testing.T) {
@@ -67,7 +72,8 @@ func TestCLI_CollectionFlag_JSONL(t *testing.T) {
 		"-q", "SELECT * FROM logs")
 
 	assertNoError(t, err, stderr)
-	assertContains(t, stdout, "logs")
+	// Verify the query worked by checking data is returned
+	assertContains(t, stdout, "rows)")
 }
 
 func TestCLI_CollectionFlag_XML(t *testing.T) {
@@ -77,7 +83,8 @@ func TestCLI_CollectionFlag_XML(t *testing.T) {
 		"-q", "SELECT * FROM xml_records")
 
 	assertNoError(t, err, stderr)
-	assertContains(t, stdout, "xml_records")
+	// Verify the query worked by checking data is returned
+	assertContains(t, stdout, "rows)")
 }
 
 func TestCLI_CollectionFlag_YAML(t *testing.T) {
@@ -87,7 +94,8 @@ func TestCLI_CollectionFlag_YAML(t *testing.T) {
 		"-q", "SELECT * FROM yaml_data")
 
 	assertNoError(t, err, stderr)
-	assertContains(t, stdout, "yaml_data")
+	// Verify the query worked by checking data is returned
+	assertContains(t, stdout, "rows)")
 }
 
 // TestCLI_LinesFlag tests the -l lines limit flag
@@ -314,7 +322,8 @@ func TestCLI_CombinedFlags_VerboseAndCollection(t *testing.T) {
 	assertNoError(t, err, stderr)
 	combined := stdout + stderr
 	assertContains(t, combined, "[VERBOSE]")
-	assertContains(t, stdout, "people")
+	// Verify the query worked by checking data is returned
+	assertContains(t, stdout, "rows)")
 }
 
 func TestCLI_CombinedFlags_LinesAndExport(t *testing.T) {

@@ -54,6 +54,7 @@ var Version = "dev"
 // DataQL is the main interface for the data query engine
 type DataQL interface {
 	Run() error
+	RunStorageOnly() error
 	Close() error
 }
 
@@ -195,6 +196,45 @@ func New(params Params) (DataQL, error) {
 	return &dataQL{params: params, bar: bar, fileHandler: handler, storage: duckDBStorage, urlHandler: urlH, s3Handler: s3H, gcsHandler: gcsH, azureHandler: azureH, stdinHandler: stdinH, pageSize: defaultPageSize}, nil
 }
 
+// NewStorageOnly creates a DataQL instance that only uses an existing DuckDB storage file
+// This mode allows querying previously saved data without specifying input files
+func NewStorageOnly(params Params) (DataQL, error) {
+	verboseLog(params.Verbose, "Starting DataQL initialization in storage-only mode...")
+
+	// Verify the DuckDB file exists
+	if _, err := os.Stat(params.DataSourceName); os.IsNotExist(err) {
+		return nil, fmt.Errorf("storage file does not exist: %s (use --file to create a new database)", params.DataSourceName)
+	}
+
+	verboseLog(params.Verbose, "Opening existing DuckDB storage: %s", params.DataSourceName)
+	duckDBStorage, err := duckdb.NewDuckDBStorage(params.DataSourceName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize storage: %w", err)
+	}
+
+	bar := progressbar.NewOptions(0,
+		progressbar.OptionSetWriter(os.Stdout),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionShowBytes(true),
+		progressbar.OptionFullWidth(),
+		progressbar.OptionSetDescription("[cyan][storage][reset] querying existing data..."),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}))
+
+	verboseLog(params.Verbose, "DataQL storage-only initialization complete")
+	return &dataQL{
+		params:   params,
+		bar:      bar,
+		storage:  duckDBStorage,
+		pageSize: defaultPageSize,
+	}, nil
+}
+
 // createFileHandler creates the appropriate file handler based on file format
 func createFileHandler(params Params, bar *progressbar.ProgressBar, storage storage.Storage) (filehandler.FileHandler, error) {
 	// Detect format from file extensions
@@ -310,6 +350,28 @@ func (d *dataQL) Run() error {
 	return d.execute()
 }
 
+// RunStorageOnly executes queries on an existing DuckDB storage file without importing new data
+func (d *dataQL) RunStorageOnly() error {
+	defer func(bar *progressbar.ProgressBar) {
+		_ = bar.Clear()
+	}(d.bar)
+
+	verboseLog(d.params.Verbose, "Running in storage-only mode...")
+
+	// List available tables
+	verboseLog(d.params.Verbose, "Listing available tables in storage...")
+	rows, err := d.storage.ShowTables()
+	if err != nil {
+		return fmt.Errorf("failed to list tables: %w", err)
+	}
+
+	if _, err := d.printResult(rows); err != nil {
+		return fmt.Errorf("failed to print tables: %w", err)
+	}
+
+	return d.execute()
+}
+
 // execute runs the execution after data import
 func (d *dataQL) execute() error {
 	switch {
@@ -328,9 +390,10 @@ func (d *dataQL) execute() error {
 
 // Close cleans up resources
 func (d *dataQL) Close() error {
-	defer func(fileHandler filehandler.FileHandler) {
-		_ = fileHandler.Close()
-	}(d.fileHandler)
+	// Close file handler if present (not present in storage-only mode)
+	if d.fileHandler != nil {
+		_ = d.fileHandler.Close()
+	}
 
 	// Clean up any temp files from stdin
 	if d.stdinHandler != nil {

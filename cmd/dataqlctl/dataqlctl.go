@@ -95,9 +95,8 @@ func (c *dataQlCtl) Command() (*cobra.Command, error) {
 		PersistentFlags().
 		StringVarP(&c.params.InputFormat, inputFormatParam, inputFormatShortParam, "csv", "input format when using stdin (csv, json, jsonl, xml, yaml)")
 
-	if err := command.MarkPersistentFlagRequired(fileParam); err != nil {
-		return nil, fmt.Errorf("failed to validate flag %s: %w", fileParam, err)
-	}
+	// Note: file flag is no longer required if storage flag points to existing DuckDB file
+	// Validation is done in runE to allow querying existing DuckDB files
 
 	if c.params.Export != "" && c.params.Type == "" {
 		return nil, fmt.Errorf("export type is required when export path is specified")
@@ -108,6 +107,33 @@ func (c *dataQlCtl) Command() (*cobra.Command, error) {
 
 func (c *dataQlCtl) runE(cmd *cobra.Command, _ []string) error {
 	cmd.SilenceUsage = true
+
+	// Check if we have file inputs or storage-only mode
+	hasFileInputs := len(c.params.FileInputs) > 0
+	hasStorage := c.params.DataSourceName != ""
+
+	// If no file inputs and no storage, we need at least one source
+	if !hasFileInputs && !hasStorage {
+		return fmt.Errorf("either --file or --storage with an existing DuckDB file is required")
+	}
+
+	// If no file inputs but storage is provided, check if we can query existing DuckDB
+	if !hasFileInputs && hasStorage {
+		dql, err := dataql.NewStorageOnly(c.params)
+		if err != nil {
+			return fmt.Errorf("failed to initialize dataql: %w", err)
+		}
+		defer func(dql dataql.DataQL) {
+			_ = dql.Close()
+		}(dql)
+
+		if err := dql.RunStorageOnly(); err != nil {
+			return fmt.Errorf("failed to run dataql: %w", err)
+		}
+		return nil
+	}
+
+	// Normal mode with file inputs
 	dql, err := dataql.New(c.params)
 	if err != nil {
 		return fmt.Errorf("failed to initialize dataql: %w", err)

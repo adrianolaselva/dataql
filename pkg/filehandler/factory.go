@@ -29,7 +29,8 @@ const (
 	FormatMongoDB  Format = "mongodb"
 	FormatDynamoDB Format = "dynamodb"
 	FormatSQLite   Format = "sqlite"
-	FormatMQ       Format = "mq" // Message Queue (SQS, Kafka, RabbitMQ, etc.)
+	FormatMQ       Format = "mq"    // Message Queue (SQS, Kafka, RabbitMQ, etc.)
+	FormatMixed    Format = "mixed" // Mixed file formats (for JOINs across different formats)
 )
 
 // HandlerFactory creates file handlers based on format
@@ -103,7 +104,8 @@ func DetectFormat(filePath string) (Format, error) {
 }
 
 // DetectFormatFromFiles detects the format from a list of files
-// Returns error if files have mixed formats
+// If all files have the same format, returns that format
+// If files have mixed formats, returns FormatMixed
 func DetectFormatFromFiles(files []string) (Format, error) {
 	if len(files) == 0 {
 		return "", fmt.Errorf("no files provided")
@@ -118,11 +120,48 @@ func DetectFormatFromFiles(files []string) (Format, error) {
 		if i == 0 {
 			detectedFormat = format
 		} else if format != detectedFormat {
-			return "", fmt.Errorf("mixed file formats not supported: found %s and %s", detectedFormat, format)
+			// Mixed formats detected - return special format
+			return FormatMixed, nil
 		}
 	}
 
 	return detectedFormat, nil
+}
+
+// DetectFormatsFromFiles returns a map of file path to format for each file
+func DetectFormatsFromFiles(files []string) (map[string]Format, error) {
+	if len(files) == 0 {
+		return nil, fmt.Errorf("no files provided")
+	}
+
+	result := make(map[string]Format)
+	for _, file := range files {
+		format, err := DetectFormat(file)
+		if err != nil {
+			return nil, err
+		}
+		result[file] = format
+	}
+
+	return result, nil
+}
+
+// GroupFilesByFormat groups files by their format
+func GroupFilesByFormat(files []string) (map[Format][]string, error) {
+	if len(files) == 0 {
+		return nil, fmt.Errorf("no files provided")
+	}
+
+	result := make(map[Format][]string)
+	for _, file := range files {
+		format, err := DetectFormat(file)
+		if err != nil {
+			return nil, err
+		}
+		result[format] = append(result[format], file)
+	}
+
+	return result, nil
 }
 
 // SupportedFormats returns a list of supported file formats

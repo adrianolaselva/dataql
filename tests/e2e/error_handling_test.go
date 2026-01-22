@@ -372,17 +372,18 @@ func TestError_InvalidStoragePath(t *testing.T) {
 }
 
 // ============================================
-// Mixed Format Error Tests
+// Mixed Format Tests - Now Supported (Issue #17)
 // ============================================
 
-func TestError_MixedFormats(t *testing.T) {
-	_, stderr, err := runDataQL(t, "run",
+func TestMixedFormats_NowSupported(t *testing.T) {
+	// Mixed file formats are now supported (Issue #17)
+	stdout, stderr, err := runDataQL(t, "run",
 		"-f", fixture("csv/simple.csv"),
 		"-f", fixture("json/people.json"),
 		"-q", "SELECT * FROM simple")
 
-	assertError(t, err)
-	assertContains(t, stderr, "mixed")
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "John")
 }
 
 // ============================================

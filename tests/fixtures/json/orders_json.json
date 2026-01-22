@@ -1,0 +1,6 @@
+[
+  {"id": 1, "customer_id": 1, "total": 100},
+  {"id": 2, "customer_id": 1, "total": 200},
+  {"id": 3, "customer_id": 2, "total": 150},
+  {"id": 4, "customer_id": 3, "total": 300}
+]

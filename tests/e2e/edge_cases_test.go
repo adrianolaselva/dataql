@@ -427,13 +427,14 @@ func TestEdge_MultiFile_SameName(t *testing.T) {
 }
 
 func TestEdge_MultiFile_DifferentFormats(t *testing.T) {
-	// Mixed file formats are not supported, should return an error
-	_, _, err := runDataQL(t, "run",
+	// Mixed file formats are now supported (Issue #17)
+	stdout, stderr, err := runDataQL(t, "run",
 		"-f", fixture("csv/simple.csv"),
 		"-f", fixture("json/people.json"),
 		"-q", "SELECT * FROM simple")
 
-	assertError(t, err)
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "John")
 }
 
 func TestEdge_MultiFile_SameFormat(t *testing.T) {

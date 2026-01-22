@@ -27,13 +27,15 @@ func TestMultiFile_JoinBetweenFiles(t *testing.T) {
 	assertContains(t, stdout, "Sales")
 }
 
-func TestMultiFile_MixedFormatsError(t *testing.T) {
-	_, _, err := runDataQL(t, "run",
+func TestMultiFile_MixedFormatsSupported(t *testing.T) {
+	// Mixed file formats are now supported (Issue #17)
+	stdout, stderr, err := runDataQL(t, "run",
 		"-f", fixture("csv/simple.csv"),
 		"-f", fixture("json/people.json"),
 		"-q", "SELECT * FROM simple")
 
-	assertError(t, err)
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "John")
 }
 
 func TestMultiFile_MultipleJSONL(t *testing.T) {

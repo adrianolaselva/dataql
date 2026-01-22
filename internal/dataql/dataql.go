@@ -16,6 +16,7 @@ import (
 	"github.com/adrianolaselva/dataql/pkg/azurehandler"
 	"github.com/adrianolaselva/dataql/pkg/filehandler"
 	avroHandler "github.com/adrianolaselva/dataql/pkg/filehandler/avro"
+	compositeHandler "github.com/adrianolaselva/dataql/pkg/filehandler/composite"
 	csvHandler "github.com/adrianolaselva/dataql/pkg/filehandler/csv"
 	databaseHandler "github.com/adrianolaselva/dataql/pkg/filehandler/database"
 	dynamodbHandler "github.com/adrianolaselva/dataql/pkg/filehandler/dynamodb"
@@ -276,6 +277,14 @@ func createFileHandler(params Params, bar *progressbar.ProgressBar, storage stor
 			return nil, fmt.Errorf("message queue URL must be a single connection string")
 		}
 		return mqHandler.NewMQHandler(params.FileInputs[0], bar, storage, params.Lines, params.Collection)
+
+	case filehandler.FormatMixed:
+		// Mixed formats - use composite handler to process each file with its appropriate handler
+		delimiter := ','
+		if params.Delimiter != "" {
+			delimiter = rune(params.Delimiter[0])
+		}
+		return compositeHandler.NewCompositeHandler(params.FileInputs, delimiter, bar, storage, params.Lines, params.Collection)
 
 	default:
 		return nil, fmt.Errorf("unsupported file format: %s", format)

@@ -229,14 +229,12 @@ func TestJSON_ComplexWhere(t *testing.T) {
 }
 
 func TestJSON_JoinWithCSV(t *testing.T) {
-	// Note: Mixed file formats (JSON + CSV) are not supported
-	// This test documents the expected behavior
-	_, stderr, err := runDataQL(t, "run",
+	// Mixed file formats (JSON + CSV) are now supported (Issue #17)
+	stdout, stderr, err := runDataQL(t, "run",
 		"-f", fixture("json/events_timeline.json"),
 		"-f", fixture("csv/simple.csv"),
 		"-q", "SELECT * FROM events_timeline LIMIT 5")
 
-	// Mixed formats should fail with a clear error message
-	assertError(t, err)
-	assertContains(t, stderr, "mixed file formats not supported")
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "rows)")
 }

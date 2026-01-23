@@ -47,6 +47,9 @@ jobs:
         with:
           go-version: '1.24'
 
+      - name: Build Binary
+        run: go build -o dataql ./main.go
+
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out ./...
 

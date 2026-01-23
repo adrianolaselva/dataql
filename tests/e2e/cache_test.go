@@ -1,9 +1,7 @@
-package e2e
+package e2e_test
 
 import (
-	"bytes"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -15,32 +13,23 @@ func TestCache_BasicUsage(t *testing.T) {
 
 	// Create a test CSV file
 	csvContent := "id,name,value\n1,alice,100\n2,bob,200\n3,charlie,300"
-	csvFile := filepath.Join(t.TempDir(), "test.csv")
+	dataDir := t.TempDir()
+	csvFile := filepath.Join(dataDir, "test.csv")
 	if err := os.WriteFile(csvFile, []byte(csvContent), 0644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
 	// First run - should import and cache
-	cmd := exec.Command("./dataql", "run",
+	stdout, stderr, err := runDataQL(t, "run",
 		"-f", csvFile,
 		"-q", "SELECT COUNT(*) as cnt FROM test",
 		"--cache",
 		"--cache-dir", cacheDir,
 		"-Q", // quiet mode
 	)
-	cmd.Dir = findProjectRoot(t)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("first run failed: %v\nstdout: %s\nstderr: %s", err, stdout.String(), stderr.String())
-	}
-
-	output := stdout.String()
-	if !strings.Contains(output, "3") {
-		t.Errorf("expected count of 3, got: %s", output)
-	}
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "3")
 
 	// Verify cache files were created
 	files, err := os.ReadDir(cacheDir)
@@ -73,15 +62,14 @@ func TestCache_SecondRunUsesCachedData(t *testing.T) {
 
 	// Create a test CSV file
 	csvContent := "id,name,value\n1,alice,100\n2,bob,200\n3,charlie,300"
-	csvFile := filepath.Join(t.TempDir(), "test.csv")
+	dataDir := t.TempDir()
+	csvFile := filepath.Join(dataDir, "test.csv")
 	if err := os.WriteFile(csvFile, []byte(csvContent), 0644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	projectRoot := findProjectRoot(t)
-
 	// First run - should import and cache
-	cmd1 := exec.Command("./dataql", "run",
+	stdout1, stderr1, err := runDataQL(t, "run",
 		"-f", csvFile,
 		"-q", "SELECT COUNT(*) as cnt FROM test",
 		"--cache",
@@ -89,22 +77,12 @@ func TestCache_SecondRunUsesCachedData(t *testing.T) {
 		"-Q",
 		"-v", // verbose to see cache messages
 	)
-	cmd1.Dir = projectRoot
-	var stdout1, stderr1 bytes.Buffer
-	cmd1.Stdout = &stdout1
-	cmd1.Stderr = &stderr1
 
-	if err := cmd1.Run(); err != nil {
-		t.Fatalf("first run failed: %v\nstdout: %s\nstderr: %s", err, stdout1.String(), stderr1.String())
-	}
-
-	firstOutput := stdout1.String()
-	if !strings.Contains(firstOutput, "Starting data import") {
-		t.Error("first run should show import message")
-	}
+	assertNoError(t, err, stderr1)
+	assertContains(t, stdout1, "Starting data import")
 
 	// Second run - should use cached data
-	cmd2 := exec.Command("./dataql", "run",
+	stdout2, stderr2, err := runDataQL(t, "run",
 		"-f", csvFile,
 		"-q", "SELECT COUNT(*) as cnt FROM test",
 		"--cache",
@@ -112,22 +90,10 @@ func TestCache_SecondRunUsesCachedData(t *testing.T) {
 		"-Q",
 		"-v", // verbose to see cache messages
 	)
-	cmd2.Dir = projectRoot
-	var stdout2, stderr2 bytes.Buffer
-	cmd2.Stdout = &stdout2
-	cmd2.Stderr = &stderr2
 
-	if err := cmd2.Run(); err != nil {
-		t.Fatalf("second run failed: %v\nstdout: %s\nstderr: %s", err, stdout2.String(), stderr2.String())
-	}
-
-	secondOutput := stdout2.String()
-	if !strings.Contains(secondOutput, "Using cached data") {
-		t.Error("second run should show cache hit message")
-	}
-	if strings.Contains(secondOutput, "Starting data import") {
-		t.Error("second run should not show import message")
-	}
+	assertNoError(t, err, stderr2)
+	assertContains(t, stdout2, "Using cached data")
+	assertNotContains(t, stdout2, "Starting data import")
 }
 
 func TestCache_InvalidatedOnFileChange(t *testing.T) {
@@ -142,20 +108,15 @@ func TestCache_InvalidatedOnFileChange(t *testing.T) {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	projectRoot := findProjectRoot(t)
-
 	// First run - should import and cache
-	cmd1 := exec.Command("./dataql", "run",
+	_, stderr1, err := runDataQL(t, "run",
 		"-f", csvFile,
 		"-q", "SELECT COUNT(*) as cnt FROM test",
 		"--cache",
 		"--cache-dir", cacheDir,
 		"-Q",
 	)
-	cmd1.Dir = projectRoot
-	if err := cmd1.Run(); err != nil {
-		t.Fatalf("first run failed: %v", err)
-	}
+	assertNoError(t, err, stderr1)
 
 	// Modify the file (add a row)
 	csvContent2 := "id,name,value\n1,alice,100\n2,bob,200\n3,charlie,300"
@@ -164,26 +125,17 @@ func TestCache_InvalidatedOnFileChange(t *testing.T) {
 	}
 
 	// Second run - should NOT use cache (file modified)
-	cmd2 := exec.Command("./dataql", "run",
+	stdout2, stderr2, err := runDataQL(t, "run",
 		"-f", csvFile,
 		"-q", "SELECT COUNT(*) as cnt FROM test",
 		"--cache",
 		"--cache-dir", cacheDir,
 		"-Q",
 	)
-	cmd2.Dir = projectRoot
-	var stdout2 bytes.Buffer
-	cmd2.Stdout = &stdout2
 
-	if err := cmd2.Run(); err != nil {
-		t.Fatalf("second run failed: %v", err)
-	}
-
-	output := stdout2.String()
+	assertNoError(t, err, stderr2)
 	// Should show 3 rows now (from the modified file)
-	if !strings.Contains(output, "3") {
-		t.Errorf("expected count of 3 after file modification, got: %s", output)
-	}
+	assertContains(t, stdout2, "3")
 }
 
 func TestCache_ListCommand(t *testing.T) {
@@ -192,45 +144,30 @@ func TestCache_ListCommand(t *testing.T) {
 
 	// Create a test CSV file
 	csvContent := "id,name,value\n1,alice,100\n2,bob,200"
-	csvFile := filepath.Join(t.TempDir(), "test.csv")
+	dataDir := t.TempDir()
+	csvFile := filepath.Join(dataDir, "test.csv")
 	if err := os.WriteFile(csvFile, []byte(csvContent), 0644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	projectRoot := findProjectRoot(t)
-
 	// Run with cache to create cache entry
-	cmd1 := exec.Command("./dataql", "run",
+	_, stderr1, err := runDataQL(t, "run",
 		"-f", csvFile,
 		"-q", "SELECT * FROM test",
 		"--cache",
 		"--cache-dir", cacheDir,
 		"-Q",
 	)
-	cmd1.Dir = projectRoot
-	if err := cmd1.Run(); err != nil {
-		t.Fatalf("run failed: %v", err)
-	}
+	assertNoError(t, err, stderr1)
 
 	// List cache
-	cmd2 := exec.Command("./dataql", "cache", "list",
+	stdout, stderr, err := runDataQL(t, "cache", "list",
 		"-d", cacheDir,
 	)
-	cmd2.Dir = projectRoot
-	var stdout bytes.Buffer
-	cmd2.Stdout = &stdout
 
-	if err := cmd2.Run(); err != nil {
-		t.Fatalf("cache list failed: %v", err)
-	}
-
-	output := stdout.String()
-	if !strings.Contains(output, "test") {
-		t.Errorf("cache list should show table name, got: %s", output)
-	}
-	if !strings.Contains(output, "Total: 1") {
-		t.Errorf("cache list should show 1 entry, got: %s", output)
-	}
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "test")
+	assertContains(t, stdout, "Total: 1")
 }
 
 func TestCache_StatsCommand(t *testing.T) {
@@ -239,45 +176,30 @@ func TestCache_StatsCommand(t *testing.T) {
 
 	// Create a test CSV file
 	csvContent := "id,name,value\n1,alice,100\n2,bob,200"
-	csvFile := filepath.Join(t.TempDir(), "test.csv")
+	dataDir := t.TempDir()
+	csvFile := filepath.Join(dataDir, "test.csv")
 	if err := os.WriteFile(csvFile, []byte(csvContent), 0644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	projectRoot := findProjectRoot(t)
-
 	// Run with cache to create cache entry
-	cmd1 := exec.Command("./dataql", "run",
+	_, stderr1, err := runDataQL(t, "run",
 		"-f", csvFile,
 		"-q", "SELECT * FROM test",
 		"--cache",
 		"--cache-dir", cacheDir,
 		"-Q",
 	)
-	cmd1.Dir = projectRoot
-	if err := cmd1.Run(); err != nil {
-		t.Fatalf("run failed: %v", err)
-	}
+	assertNoError(t, err, stderr1)
 
 	// Get cache stats
-	cmd2 := exec.Command("./dataql", "cache", "stats",
+	stdout, stderr, err := runDataQL(t, "cache", "stats",
 		"-d", cacheDir,
 	)
-	cmd2.Dir = projectRoot
-	var stdout bytes.Buffer
-	cmd2.Stdout = &stdout
 
-	if err := cmd2.Run(); err != nil {
-		t.Fatalf("cache stats failed: %v", err)
-	}
-
-	output := stdout.String()
-	if !strings.Contains(output, "Cache directory:") {
-		t.Errorf("cache stats should show cache directory, got: %s", output)
-	}
-	if !strings.Contains(output, "Cached entries: 1") {
-		t.Errorf("cache stats should show 1 entry, got: %s", output)
-	}
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "Cache directory:")
+	assertContains(t, stdout, "Cached entries: 1")
 }
 
 func TestCache_ClearCommand(t *testing.T) {
@@ -286,43 +208,30 @@ func TestCache_ClearCommand(t *testing.T) {
 
 	// Create a test CSV file
 	csvContent := "id,name,value\n1,alice,100\n2,bob,200"
-	csvFile := filepath.Join(t.TempDir(), "test.csv")
+	dataDir := t.TempDir()
+	csvFile := filepath.Join(dataDir, "test.csv")
 	if err := os.WriteFile(csvFile, []byte(csvContent), 0644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	projectRoot := findProjectRoot(t)
-
 	// Run with cache to create cache entry
-	cmd1 := exec.Command("./dataql", "run",
+	_, stderr1, err := runDataQL(t, "run",
 		"-f", csvFile,
 		"-q", "SELECT * FROM test",
 		"--cache",
 		"--cache-dir", cacheDir,
 		"-Q",
 	)
-	cmd1.Dir = projectRoot
-	if err := cmd1.Run(); err != nil {
-		t.Fatalf("run failed: %v", err)
-	}
+	assertNoError(t, err, stderr1)
 
 	// Clear cache with --all flag
-	cmd2 := exec.Command("./dataql", "cache", "clear",
+	stdout, stderr, err := runDataQL(t, "cache", "clear",
 		"-d", cacheDir,
 		"--all",
 	)
-	cmd2.Dir = projectRoot
-	var stdout bytes.Buffer
-	cmd2.Stdout = &stdout
 
-	if err := cmd2.Run(); err != nil {
-		t.Fatalf("cache clear failed: %v", err)
-	}
-
-	output := stdout.String()
-	if !strings.Contains(output, "Cleared") {
-		t.Errorf("cache clear should show cleared message, got: %s", output)
-	}
+	assertNoError(t, err, stderr)
+	assertContains(t, stdout, "Cleared")
 
 	// Verify cache is empty
 	files, err := os.ReadDir(cacheDir)
@@ -340,24 +249,20 @@ func TestCache_WithoutCacheFlag(t *testing.T) {
 
 	// Create a test CSV file
 	csvContent := "id,name,value\n1,alice,100\n2,bob,200"
-	csvFile := filepath.Join(t.TempDir(), "test.csv")
+	dataDir := t.TempDir()
+	csvFile := filepath.Join(dataDir, "test.csv")
 	if err := os.WriteFile(csvFile, []byte(csvContent), 0644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	projectRoot := findProjectRoot(t)
-
 	// Run WITHOUT cache flag
-	cmd := exec.Command("./dataql", "run",
+	_, stderr, err := runDataQL(t, "run",
 		"-f", csvFile,
 		"-q", "SELECT * FROM test",
 		"--cache-dir", cacheDir, // specify dir but not --cache flag
 		"-Q",
 	)
-	cmd.Dir = projectRoot
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("run failed: %v", err)
-	}
+	assertNoError(t, err, stderr)
 
 	// Verify no cache files were created
 	files, err := os.ReadDir(cacheDir)
@@ -389,10 +294,8 @@ func TestCache_MultipleFiles(t *testing.T) {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	projectRoot := findProjectRoot(t)
-
 	// First run - should import and cache
-	cmd1 := exec.Command("./dataql", "run",
+	stdout1, stderr1, err := runDataQL(t, "run",
 		"-f", csvFile1,
 		"-f", csvFile2,
 		"-q", "SELECT u.name, v.value FROM users u JOIN values v ON u.id = v.id",
@@ -401,20 +304,12 @@ func TestCache_MultipleFiles(t *testing.T) {
 		"-Q",
 		"-v",
 	)
-	cmd1.Dir = projectRoot
-	var stdout1 bytes.Buffer
-	cmd1.Stdout = &stdout1
 
-	if err := cmd1.Run(); err != nil {
-		t.Fatalf("first run failed: %v", err)
-	}
-
-	if !strings.Contains(stdout1.String(), "Starting data import") {
-		t.Error("first run should show import message")
-	}
+	assertNoError(t, err, stderr1)
+	assertContains(t, stdout1, "Starting data import")
 
 	// Second run - should use cache
-	cmd2 := exec.Command("./dataql", "run",
+	stdout2, stderr2, err := runDataQL(t, "run",
 		"-f", csvFile1,
 		"-f", csvFile2,
 		"-q", "SELECT u.name, v.value FROM users u JOIN values v ON u.id = v.id",
@@ -423,35 +318,7 @@ func TestCache_MultipleFiles(t *testing.T) {
 		"-Q",
 		"-v",
 	)
-	cmd2.Dir = projectRoot
-	var stdout2 bytes.Buffer
-	cmd2.Stdout = &stdout2
 
-	if err := cmd2.Run(); err != nil {
-		t.Fatalf("second run failed: %v", err)
-	}
-
-	if !strings.Contains(stdout2.String(), "Using cached data") {
-		t.Error("second run should use cached data")
-	}
-}
-
-// findProjectRoot finds the project root directory
-func findProjectRoot(t *testing.T) string {
-	// Try to find the project root by looking for go.mod
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("failed to get working directory: %v", err)
-	}
-
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatal("could not find project root")
-		}
-		dir = parent
-	}
+	assertNoError(t, err, stderr2)
+	assertContains(t, stdout2, "Using cached data")
 }

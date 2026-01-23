@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/adrianolaselva/dataql/cmd/cachectl"
 	"github.com/adrianolaselva/dataql/cmd/dataqlctl"
 	"github.com/adrianolaselva/dataql/cmd/describectl"
 	"github.com/adrianolaselva/dataql/cmd/mcpctl"
@@ -75,6 +76,9 @@ func (c *cliBase) Execute() error {
 
 	// Add MCP server command for LLM integration
 	c.rootCmd.AddCommand(mcpctl.New().Command())
+
+	// Add cache management command
+	c.rootCmd.AddCommand(cachectl.New().Command())
 
 	if err := c.rootCmd.Execute(); err != nil {
 		return fmt.Errorf("failed to execute command %w", err)

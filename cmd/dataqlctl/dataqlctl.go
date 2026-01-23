@@ -37,6 +37,8 @@ const (
 	verticalShortParam      = "G"
 	paramParam              = "param"
 	paramShortParam         = "p"
+	cacheParam              = "cache"
+	cacheDirParam           = "cache-dir"
 )
 
 // DataQlCtl is the interface for the dataql controller
@@ -123,6 +125,14 @@ func (c *dataQlCtl) Command() (*cobra.Command, error) {
 	command.
 		PersistentFlags().
 		StringArrayVarP(&c.params.QueryParams, paramParam, paramShortParam, []string{}, "query parameter in format name=value (can be repeated)")
+
+	command.
+		PersistentFlags().
+		BoolVar(&c.params.Cache, cacheParam, false, "enable data caching for faster subsequent queries")
+
+	command.
+		PersistentFlags().
+		StringVar(&c.params.CacheDir, cacheDirParam, "", "cache directory (default: ~/.dataql/cache)")
 
 	// Note: file flag is no longer required if storage flag points to existing DuckDB file
 	// Validation is done in runE to allow querying existing DuckDB files

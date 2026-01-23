@@ -16,6 +16,8 @@ type Params struct {
 	Truncate       int      // Truncate column values longer than N characters (0 = no truncation)
 	Vertical       bool     // Display results in vertical format (like MySQL \G)
 	QueryParams    []string // Query parameters in format "name=value"
+	Cache          bool     // Enable data caching for faster subsequent queries
+	CacheDir       string   // Cache directory path (default: ~/.dataql/cache)
 }
 
 // FileInput represents a file path with an optional table alias

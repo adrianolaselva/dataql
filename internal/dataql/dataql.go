@@ -14,6 +14,7 @@ import (
 
 	"github.com/adrianolaselva/dataql/internal/exportdata"
 	"github.com/adrianolaselva/dataql/pkg/azurehandler"
+	"github.com/adrianolaselva/dataql/pkg/cachehandler"
 	"github.com/adrianolaselva/dataql/pkg/compressionhandler"
 	"github.com/adrianolaselva/dataql/pkg/filehandler"
 	avroHandler "github.com/adrianolaselva/dataql/pkg/filehandler/avro"
@@ -74,12 +75,15 @@ type dataQL struct {
 	azureHandler       *azurehandler.AzureHandler
 	stdinHandler       *stdinhandler.StdinHandler
 	compressionHandler *compressionhandler.CompressionHandler
+	cacheHandler       *cachehandler.CacheHandler
 	pageSize           int
 	paging             bool              // Enable paging in REPL mode
 	showTiming         bool              // Show query execution time
 	truncate           int               // Truncate column values longer than N characters
 	vertical           bool              // Display results in vertical format
 	queryParams        map[string]string // Parsed query parameters
+	cacheHit           bool              // Whether cache was used
+	cacheKey           string            // Cache key for current session
 }
 
 // verboseLog prints a message if verbose mode is enabled
@@ -223,8 +227,52 @@ func New(params Params) (DataQL, error) {
 	params.FileInputs = resolvedFiles
 	verboseLog(params.Verbose, "Decompressed file inputs: %v", params.FileInputs)
 
+	// Create cache handler if caching is enabled
+	cacheH, err := cachehandler.NewCacheHandler(params.CacheDir, params.Cache)
+	if err != nil {
+		_ = stdinH.Cleanup()
+		_ = urlH.Cleanup()
+		_ = s3H.Cleanup()
+		_ = gcsH.Cleanup()
+		_ = azureH.Cleanup()
+		_ = compressionH.Cleanup()
+		return nil, fmt.Errorf("failed to initialize cache handler: %w", err)
+	}
+
+	// Check if we can use cached data
+	var cacheHit bool
+	var cacheKey string
+	var storagePath string
+
+	if cacheH.IsEnabled() {
+		verboseLog(params.Verbose, "Checking for cached data...")
+		valid, cachePath, err := cacheH.IsCacheValid(params.FileInputs)
+		if err != nil {
+			verboseLog(params.Verbose, "Cache validation error: %v", err)
+		} else if valid {
+			verboseLog(params.Verbose, "Cache hit! Using cached data from: %s", cachePath)
+			cacheHit = true
+			storagePath = cachePath
+		}
+
+		// Generate cache key for potential save later
+		cacheKey, _ = cacheH.GenerateCacheKey(params.FileInputs)
+	}
+
+	// Determine storage path
+	if storagePath == "" {
+		if cacheH.IsEnabled() && cacheKey != "" {
+			// Use cache path for new import
+			storagePath = cacheH.GetCachePath(cacheKey)
+			verboseLog(params.Verbose, "Will cache data to: %s", storagePath)
+		} else if params.DataSourceName != "" {
+			storagePath = params.DataSourceName
+		}
+		// else: empty string means in-memory
+	}
+
 	verboseLog(params.Verbose, "Initializing DuckDB storage...")
-	duckDBStorage, err := duckdb.NewDuckDBStorage(params.DataSourceName)
+	duckDBStorage, err := duckdb.NewDuckDBStorage(storagePath)
 	if err != nil {
 		_ = stdinH.Cleanup()
 		_ = urlH.Cleanup()
@@ -297,10 +345,13 @@ func New(params Params) (DataQL, error) {
 		azureHandler:       azureH,
 		stdinHandler:       stdinH,
 		compressionHandler: compressionH,
+		cacheHandler:       cacheH,
 		pageSize:           defaultPageSize,
 		truncate:           params.Truncate,
 		vertical:           params.Vertical,
 		queryParams:        queryParams,
+		cacheHit:           cacheHit,
+		cacheKey:           cacheKey,
 	}, nil
 }
 
@@ -465,13 +516,31 @@ func (d *dataQL) Run() error {
 		_ = bar.Clear()
 	}(d.bar)
 
-	verboseLog(d.params.Verbose, "Starting data import...")
-	if err := d.fileHandler.Import(); err != nil {
-		return fmt.Errorf("failed to import data %w", err)
+	// Skip import if using cached data
+	if d.cacheHit {
+		verboseLog(d.params.Verbose, "Using cached data, skipping import...")
+	} else {
+		verboseLog(d.params.Verbose, "Starting data import...")
+		if err := d.fileHandler.Import(); err != nil {
+			return fmt.Errorf("failed to import data %w", err)
+		}
+		verboseLog(d.params.Verbose, "Data import complete. Lines imported: %d", d.fileHandler.Lines())
+
+		// Save cache metadata if caching is enabled
+		if d.cacheHandler != nil && d.cacheHandler.IsEnabled() && d.cacheKey != "" {
+			if err := d.saveCacheMetadata(); err != nil {
+				// Log warning but don't fail the operation
+				verboseLog(d.params.Verbose, "Warning: failed to save cache metadata: %v", err)
+			} else {
+				verboseLog(d.params.Verbose, "Cache metadata saved successfully")
+			}
+		}
 	}
-	verboseLog(d.params.Verbose, "Data import complete. Lines imported: %d", d.fileHandler.Lines())
+
 	defer func(fileHandler filehandler.FileHandler) {
-		_ = fileHandler.Close()
+		if fileHandler != nil {
+			_ = fileHandler.Close()
+		}
 	}(d.fileHandler)
 
 	// Show table schema unless --no-schema is set or a query is specified (non-REPL mode)
@@ -1452,4 +1521,40 @@ func isDateTimeType(dataType string) bool {
 		}
 	}
 	return false
+}
+
+// saveCacheMetadata saves metadata about the cached data
+func (d *dataQL) saveCacheMetadata() error {
+	// Get the list of tables
+	rows, err := d.storage.ShowTables()
+	if err != nil {
+		return fmt.Errorf("failed to list tables: %w", err)
+	}
+
+	var tables []string
+	var totalRows int64
+
+	for rows.Next() {
+		var id int
+		var tableName, columns string
+		var totalColumns int
+		if err := rows.Scan(&id, &tableName, &columns, &totalColumns); err != nil {
+			rows.Close()
+			return fmt.Errorf("failed to read table info: %w", err)
+		}
+		tables = append(tables, tableName)
+
+		// Count rows in this table
+		countRows, err := d.storage.Query(fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName))
+		if err == nil && countRows.Next() {
+			var count int64
+			countRows.Scan(&count)
+			totalRows += count
+			countRows.Close()
+		}
+	}
+	rows.Close()
+
+	// Save the metadata
+	return d.cacheHandler.SaveMetadata(d.cacheKey, d.params.FileInputs, tables, totalRows)
 }

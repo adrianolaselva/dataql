@@ -75,8 +75,30 @@ cat data.csv | dataql run -f - -q "SELECT * FROM stdin_data LIMIT 5"
 - CSV export: `-e output.csv -t csv`
 - JSONL export: `-e output.jsonl -t jsonl`
 
+## Exploratory Statistics
+
+```bash
+# Get comprehensive statistics for a file
+dataql describe -f data.csv
+
+# Describe specific table after loading
+dataql run -f data.csv -q ".describe data"
+```
+
+## Quick Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "column not found" | Check column names with `.schema` (case sensitive) |
+| "table not found" | Table name = filename without extension |
+| Too much output | Add `LIMIT 10` or `LIMIT 5` to query |
+| File too large | Use `--cache` flag to cache imported data |
+| Wrong delimiter | Use `-d ";"` for semicolon-separated files |
+
 ## Notes
 
 - Always use LIMIT for large files to avoid overwhelming output
 - Use `.schema` first to understand column names and types
 - For stdin input with non-CSV format: `-i json` or `-i jsonl`
+- Use `--cache` for repeated queries on the same file
+- Use `-Q` (quiet) to suppress progress bar in scripts

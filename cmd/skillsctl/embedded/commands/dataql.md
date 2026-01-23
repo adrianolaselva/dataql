@@ -35,3 +35,29 @@ Execute a SQL query on a data file using DataQL.
 - If file not found: suggest checking the path
 - If SQL syntax error: show the error and suggest fixes
 - If column not found: run `.schema` to show available columns
+
+## Advanced Options
+
+- `--cache`: Enable caching for faster repeated queries
+- `--cache-dir <dir>`: Specify custom cache directory
+- `-p key=value`: Pass query parameters (use `:key` in SQL)
+- `-v`: Verbose mode for debugging
+- `-Q`: Quiet mode (suppress progress bar)
+- `--vertical`: Display results vertically (like MySQL \G)
+- `--truncate <n>`: Truncate columns at n characters
+
+## Useful Patterns
+
+```bash
+# Parameterized queries
+dataql run -f users.csv -q "SELECT * FROM users WHERE status = :status" -p status=active
+
+# Cache for large files
+dataql run -f large.csv -q "SELECT COUNT(*) FROM large" --cache
+
+# Export results
+dataql run -f data.csv -q "SELECT * FROM data WHERE x > 10" -e output.csv -t csv
+
+# Describe data
+dataql describe -f data.csv
+```

@@ -58,6 +58,8 @@ var Version = "dev"
 type DataQL interface {
 	Run() error
 	RunStorageOnly() error
+	RunAndDescribe() error
+	DescribeAll() error
 	Close() error
 }
 
@@ -798,6 +800,14 @@ func (d *dataQL) handleREPLCommand(line string) (bool, error) {
 			return true, fmt.Errorf("invalid vertical value: %s (use on/off)", parts[1])
 		}
 		return true, nil
+
+	case ".describe", "\\ds":
+		if len(parts) < 2 {
+			// Describe all tables
+			return true, d.DescribeAll()
+		}
+		tableName := parts[1]
+		return true, d.describeTableStats(tableName)
 	}
 
 	return false, nil // Not a REPL command, should be executed as SQL
@@ -809,6 +819,7 @@ func (d *dataQL) printHelp() {
 DataQL REPL Commands:
   \d, .tables          List all tables
   \dt <table>, .schema <table>  Show table schema
+  \ds [table], .describe [table]  Show exploratory statistics
   \c <table>, .count <table>    Count rows in table
   \q, .quit, .exit     Exit the REPL
   \h, .help, \?        Show this help message
@@ -1104,4 +1115,304 @@ func (d *dataQL) printPaginatedRows(rows *sql.Rows, columns []string, cols []int
 			return rowCount, nil
 		}
 	}
+}
+
+// RunAndDescribe imports file content and shows descriptive statistics
+func (d *dataQL) RunAndDescribe() error {
+	defer func(bar *progressbar.ProgressBar) {
+		_ = bar.Clear()
+	}(d.bar)
+
+	verboseLog(d.params.Verbose, "Starting data import...")
+	if err := d.fileHandler.Import(); err != nil {
+		return fmt.Errorf("failed to import data %w", err)
+	}
+	verboseLog(d.params.Verbose, "Data import complete. Lines imported: %d", d.fileHandler.Lines())
+	defer func(fileHandler filehandler.FileHandler) {
+		_ = fileHandler.Close()
+	}(d.fileHandler)
+
+	return d.DescribeAll()
+}
+
+// DescribeAll shows descriptive statistics for all tables
+func (d *dataQL) DescribeAll() error {
+	_ = d.bar.Clear()
+
+	// Get all tables - the schemas table has columns: id, name, columns, total_columns
+	rows, err := d.storage.ShowTables()
+	if err != nil {
+		return fmt.Errorf("failed to list tables: %w", err)
+	}
+
+	var tables []string
+	for rows.Next() {
+		var id int
+		var tableName, columns string
+		var totalColumns int
+		if err := rows.Scan(&id, &tableName, &columns, &totalColumns); err != nil {
+			rows.Close()
+			return fmt.Errorf("failed to read table name: %w", err)
+		}
+		tables = append(tables, tableName)
+	}
+	rows.Close()
+
+	if len(tables) == 0 {
+		fmt.Println("No tables found.")
+		return nil
+	}
+
+	for i, tableName := range tables {
+		if i > 0 {
+			fmt.Println() // Separator between tables
+		}
+		if err := d.describeTableStats(tableName); err != nil {
+			return fmt.Errorf("failed to describe table %s: %w", tableName, err)
+		}
+	}
+
+	return nil
+}
+
+// describeTableStats shows comprehensive statistics for a table
+func (d *dataQL) describeTableStats(tableName string) error {
+	headerColor := color.New(color.FgCyan, color.Bold)
+	headerColor.Printf("=== Table: %s ===\n\n", tableName)
+
+	// Get row count
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
+	countRows, err := d.storage.Query(countQuery)
+	if err != nil {
+		return fmt.Errorf("failed to get row count: %w", err)
+	}
+	var rowCount int64
+	if countRows.Next() {
+		if err := countRows.Scan(&rowCount); err != nil {
+			countRows.Close()
+			return fmt.Errorf("failed to read row count: %w", err)
+		}
+	}
+	countRows.Close()
+
+	fmt.Printf("Total rows: %d\n\n", rowCount)
+
+	// Get column information with statistics
+	// Use DuckDB's SUMMARIZE command which provides comprehensive statistics
+	summarizeQuery := fmt.Sprintf("SUMMARIZE SELECT * FROM %s", tableName)
+	rows, err := d.storage.Query(summarizeQuery)
+	if err != nil {
+		// Fallback to manual statistics if SUMMARIZE is not available
+		return d.describeTableStatsManual(tableName)
+	}
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return fmt.Errorf("failed to get columns: %w", err)
+	}
+
+	// Print the SUMMARIZE results in a table format
+	cols := make([]interface{}, 0)
+	for _, c := range columns {
+		cols = append(cols, c)
+	}
+
+	tbl := table.New(cols...).
+		WithHeaderFormatter(color.New(color.FgGreen, color.Underline).SprintfFunc()).
+		WithFirstColumnFormatter(color.New(color.FgYellow).SprintfFunc()).
+		WithWriter(os.Stdout)
+
+	for rows.Next() {
+		values := make([]interface{}, len(columns))
+		pointers := make([]interface{}, len(columns))
+		for i := range values {
+			pointers[i] = &values[i]
+		}
+
+		if err := rows.Scan(pointers...); err != nil {
+			return fmt.Errorf("failed to read row: %w", err)
+		}
+
+		tbl.AddRow(values...)
+	}
+
+	tbl.Print()
+	return nil
+}
+
+// describeTableStatsManual provides manual statistics when SUMMARIZE is not available
+func (d *dataQL) describeTableStatsManual(tableName string) error {
+	// Get column information from information_schema
+	schemaQuery := fmt.Sprintf(`
+		SELECT column_name, data_type
+		FROM information_schema.columns
+		WHERE table_schema = 'main' AND table_name = '%s'
+		ORDER BY ordinal_position`, tableName)
+
+	schemaRows, err := d.storage.Query(schemaQuery)
+	if err != nil {
+		return fmt.Errorf("failed to get schema: %w", err)
+	}
+
+	type columnInfo struct {
+		Name     string
+		DataType string
+	}
+	var columns []columnInfo
+
+	for schemaRows.Next() {
+		var col columnInfo
+		if err := schemaRows.Scan(&col.Name, &col.DataType); err != nil {
+			schemaRows.Close()
+			return fmt.Errorf("failed to read column info: %w", err)
+		}
+		columns = append(columns, col)
+	}
+	schemaRows.Close()
+
+	// Create table for output
+	tbl := table.New("Column", "Type", "Nulls", "Unique", "Min", "Max", "Mean", "Std").
+		WithHeaderFormatter(color.New(color.FgGreen, color.Underline).SprintfFunc()).
+		WithFirstColumnFormatter(color.New(color.FgYellow).SprintfFunc()).
+		WithWriter(os.Stdout)
+
+	for _, col := range columns {
+		// Get statistics for each column
+		stats := d.getColumnStats(tableName, col.Name, col.DataType)
+		tbl.AddRow(col.Name, col.DataType, stats.Nulls, stats.Unique, stats.Min, stats.Max, stats.Mean, stats.Std)
+	}
+
+	tbl.Print()
+	return nil
+}
+
+// columnStats holds statistics for a column
+type columnStats struct {
+	Nulls  interface{}
+	Unique interface{}
+	Min    interface{}
+	Max    interface{}
+	Mean   interface{}
+	Std    interface{}
+}
+
+// getColumnStats retrieves statistics for a specific column
+func (d *dataQL) getColumnStats(tableName, columnName, dataType string) *columnStats {
+	stats := &columnStats{
+		Nulls:  "-",
+		Unique: "-",
+		Min:    "-",
+		Max:    "-",
+		Mean:   "-",
+		Std:    "-",
+	}
+
+	// Escape column name for safety
+	escapedColumn := fmt.Sprintf("\"%s\"", columnName)
+
+	// Get null count
+	nullQuery := fmt.Sprintf("SELECT COUNT(*) - COUNT(%s) FROM %s", escapedColumn, tableName)
+	nullRows, err := d.storage.Query(nullQuery)
+	if err == nil && nullRows.Next() {
+		var nullCount int64
+		nullRows.Scan(&nullCount)
+		stats.Nulls = nullCount
+		nullRows.Close()
+	}
+
+	// Get unique count
+	uniqueQuery := fmt.Sprintf("SELECT COUNT(DISTINCT %s) FROM %s", escapedColumn, tableName)
+	uniqueRows, err := d.storage.Query(uniqueQuery)
+	if err == nil && uniqueRows.Next() {
+		var uniqueCount int64
+		uniqueRows.Scan(&uniqueCount)
+		stats.Unique = uniqueCount
+		uniqueRows.Close()
+	}
+
+	// Check if numeric type for min/max/mean/std
+	isNumeric := isNumericType(dataType)
+	isDateTime := isDateTimeType(dataType)
+
+	if isNumeric || isDateTime {
+		// Get min
+		minQuery := fmt.Sprintf("SELECT MIN(%s) FROM %s", escapedColumn, tableName)
+		minRows, err := d.storage.Query(minQuery)
+		if err == nil && minRows.Next() {
+			var minVal interface{}
+			minRows.Scan(&minVal)
+			if minVal != nil {
+				stats.Min = minVal
+			}
+			minRows.Close()
+		}
+
+		// Get max
+		maxQuery := fmt.Sprintf("SELECT MAX(%s) FROM %s", escapedColumn, tableName)
+		maxRows, err := d.storage.Query(maxQuery)
+		if err == nil && maxRows.Next() {
+			var maxVal interface{}
+			maxRows.Scan(&maxVal)
+			if maxVal != nil {
+				stats.Max = maxVal
+			}
+			maxRows.Close()
+		}
+	}
+
+	if isNumeric {
+		// Get mean
+		meanQuery := fmt.Sprintf("SELECT AVG(%s) FROM %s", escapedColumn, tableName)
+		meanRows, err := d.storage.Query(meanQuery)
+		if err == nil && meanRows.Next() {
+			var meanVal interface{}
+			meanRows.Scan(&meanVal)
+			if meanVal != nil {
+				stats.Mean = fmt.Sprintf("%.2f", meanVal)
+			}
+			meanRows.Close()
+		}
+
+		// Get standard deviation
+		stdQuery := fmt.Sprintf("SELECT STDDEV(%s) FROM %s", escapedColumn, tableName)
+		stdRows, err := d.storage.Query(stdQuery)
+		if err == nil && stdRows.Next() {
+			var stdVal interface{}
+			stdRows.Scan(&stdVal)
+			if stdVal != nil {
+				stats.Std = fmt.Sprintf("%.2f", stdVal)
+			}
+			stdRows.Close()
+		}
+	}
+
+	return stats
+}
+
+// isNumericType checks if a DuckDB data type is numeric
+func isNumericType(dataType string) bool {
+	numericTypes := []string{
+		"INTEGER", "BIGINT", "SMALLINT", "TINYINT", "UBIGINT", "UINTEGER", "USMALLINT", "UTINYINT",
+		"DOUBLE", "FLOAT", "REAL", "DECIMAL", "NUMERIC", "HUGEINT", "INT", "INT4", "INT8", "INT2", "INT1",
+	}
+	upperType := strings.ToUpper(dataType)
+	for _, nt := range numericTypes {
+		if strings.Contains(upperType, nt) {
+			return true
+		}
+	}
+	return false
+}
+
+// isDateTimeType checks if a DuckDB data type is date/time
+func isDateTimeType(dataType string) bool {
+	dateTypes := []string{"DATE", "TIME", "TIMESTAMP", "DATETIME", "INTERVAL"}
+	upperType := strings.ToUpper(dataType)
+	for _, dt := range dateTypes {
+		if strings.Contains(upperType, dt) {
+			return true
+		}
+	}
+	return false
 }

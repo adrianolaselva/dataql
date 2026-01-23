@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/adrianolaselva/dataql/cmd/dataqlctl"
+	"github.com/adrianolaselva/dataql/cmd/describectl"
 	"github.com/adrianolaselva/dataql/cmd/mcpctl"
 	"github.com/adrianolaselva/dataql/cmd/skillsctl"
 	"github.com/adrianolaselva/dataql/internal/dataql"
@@ -61,6 +62,13 @@ func (c *cliBase) Execute() error {
 	}
 
 	c.rootCmd.AddCommand(dataQlCtl)
+
+	// Add describe command for exploratory statistics
+	describeCmd, err := describectl.New().Command()
+	if err != nil {
+		return fmt.Errorf("failed to initialize describe command: %w", err)
+	}
+	c.rootCmd.AddCommand(describeCmd)
 
 	// Add skills command for Claude Code integration
 	c.rootCmd.AddCommand(skillsctl.New().Command())

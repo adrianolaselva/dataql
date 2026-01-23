@@ -35,6 +35,8 @@ const (
 	truncateShortParam      = "T"
 	verticalParam           = "vertical"
 	verticalShortParam      = "G"
+	paramParam              = "param"
+	paramShortParam         = "p"
 )
 
 // DataQlCtl is the interface for the dataql controller
@@ -117,6 +119,10 @@ func (c *dataQlCtl) Command() (*cobra.Command, error) {
 	command.
 		PersistentFlags().
 		BoolVarP(&c.params.Vertical, verticalParam, verticalShortParam, false, "display results in vertical format (like MySQL \\G)")
+
+	command.
+		PersistentFlags().
+		StringArrayVarP(&c.params.QueryParams, paramParam, paramShortParam, []string{}, "query parameter in format name=value (can be repeated)")
 
 	// Note: file flag is no longer required if storage flag points to existing DuckDB file
 	// Validation is done in runE to allow querying existing DuckDB files

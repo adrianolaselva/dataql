@@ -75,10 +75,11 @@ type dataQL struct {
 	stdinHandler       *stdinhandler.StdinHandler
 	compressionHandler *compressionhandler.CompressionHandler
 	pageSize           int
-	paging             bool // Enable paging in REPL mode
-	showTiming         bool // Show query execution time
-	truncate           int  // Truncate column values longer than N characters
-	vertical           bool // Display results in vertical format
+	paging             bool              // Enable paging in REPL mode
+	showTiming         bool              // Show query execution time
+	truncate           int               // Truncate column values longer than N characters
+	vertical           bool              // Display results in vertical format
+	queryParams        map[string]string // Parsed query parameters
 }
 
 // verboseLog prints a message if verbose mode is enabled
@@ -267,6 +268,23 @@ func New(params Params) (DataQL, error) {
 		return nil, fmt.Errorf("failed to create file handler: %w", err)
 	}
 
+	// Parse query parameters if provided
+	var queryParams map[string]string
+	if len(params.QueryParams) > 0 {
+		var err error
+		queryParams, err = ParseQueryParams(params.QueryParams)
+		if err != nil {
+			_ = stdinH.Cleanup()
+			_ = urlH.Cleanup()
+			_ = s3H.Cleanup()
+			_ = gcsH.Cleanup()
+			_ = azureH.Cleanup()
+			_ = compressionH.Cleanup()
+			return nil, fmt.Errorf("failed to parse query parameters: %w", err)
+		}
+		verboseLog(params.Verbose, "Parsed query parameters: %v", queryParams)
+	}
+
 	verboseLog(params.Verbose, "DataQL initialization complete")
 	return &dataQL{
 		params:             params,
@@ -282,6 +300,7 @@ func New(params Params) (DataQL, error) {
 		pageSize:           defaultPageSize,
 		truncate:           params.Truncate,
 		vertical:           params.Vertical,
+		queryParams:        queryParams,
 	}, nil
 }
 
@@ -322,14 +341,26 @@ func NewStorageOnly(params Params) (DataQL, error) {
 			BarEnd:        "]",
 		}))
 
+	// Parse query parameters if provided
+	var queryParams map[string]string
+	if len(params.QueryParams) > 0 {
+		var err error
+		queryParams, err = ParseQueryParams(params.QueryParams)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse query parameters: %w", err)
+		}
+		verboseLog(params.Verbose, "Parsed query parameters: %v", queryParams)
+	}
+
 	verboseLog(params.Verbose, "DataQL storage-only initialization complete")
 	return &dataQL{
-		params:   params,
-		bar:      bar,
-		storage:  duckDBStorage,
-		pageSize: defaultPageSize,
-		truncate: params.Truncate,
-		vertical: params.Vertical,
+		params:      params,
+		bar:         bar,
+		storage:     duckDBStorage,
+		pageSize:    defaultPageSize,
+		truncate:    params.Truncate,
+		vertical:    params.Vertical,
+		queryParams: queryParams,
 	}, nil
 }
 
@@ -628,7 +659,10 @@ func (d *dataQL) executeQueryAndExport(line string) error {
 		_ = bar.Finish()
 	}(d.bar)
 
-	rows, err := d.storage.Query(line)
+	// Apply query parameters if provided
+	query := ApplyQueryParams(line, d.queryParams)
+
+	rows, err := d.storage.Query(query)
 	if err != nil {
 		// Enhance error with user-friendly hints
 		enhancedErr := queryerror.EnhanceError(err)
@@ -887,7 +921,10 @@ func (d *dataQL) executeQuery(line string) error {
 
 	startTime := time.Now()
 
-	rows, err := d.storage.Query(line)
+	// Apply query parameters if provided
+	query := ApplyQueryParams(line, d.queryParams)
+
+	rows, err := d.storage.Query(query)
 	if err != nil {
 		// Enhance error with user-friendly hints
 		enhancedErr := queryerror.EnhanceError(err)

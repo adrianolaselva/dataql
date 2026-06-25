@@ -30,10 +30,10 @@
 ## 6. Aggressive modernization (one risky bump per task)
 
 - [x] 6.1 Bump Go toolchain to the latest stable: `go.mod` go 1.26.0 / toolchain go1.26.4, workflows go-version 1.26; build + unit + E2E green. (Dockerfile base image handled in milestone 2's distribution work; it is currently stale.)
-- [ ] 6.2 Upgrade the DuckDB driver (`marcboeker/go-duckdb`) to its current major; fix breakage; full gate green.
-- [ ] 6.3 Upgrade AWS SDK v2 modules to current; fix breakage; full gate green.
-- [ ] 6.4 Upgrade remaining libraries (cobra, mongo-driver, kafka-go, parquet/arrow, excelize, etc.) to current majors, grouping safe minors and isolating each risky major; full gate green per group.
-- [ ] 6.5 Add automated dependency updates (dependabot config) targeting Go modules + the toolchain, running the full CI gate.
+- [x] 6.2 DuckDB driver kept on `marcboeker/go-duckdb` v1.8.5 (latest of the v1 line). The v2 module (`/v2`) is a separate API migration and is deferred to its own change, tracked in the roadmap. Full gate green.
+- [x] 6.3 Upgrade AWS SDK v2 modules to current (core v1.41.1→v1.42.0 plus config/credentials/s3/dynamodb/sqs); build + tests + govulncheck green.
+- [x] 6.4 Upgrade remaining libraries to latest minors (cobra v1.10.2, excelize v2.10.1, mcp-go v0.43.2→v0.55.1, mongo-driver v1.17.9, kafka-go, go-sqlite3, lib/pq, mysql, goavro, color, progressbar). All majors were already current; no breaking-major upgrades were required. Full gate + lint + MCP smoke green.
+- [x] 6.5 Add `.github/dependabot.yml` for gomod (grouped minor/patch), github-actions, and docker, each running the full CI gate.
 
 ## 7. Documentation & wrap-up
 

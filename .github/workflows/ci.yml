@@ -79,6 +79,30 @@ jobs:
       - name: Smoke with network disabled
         run: sudo unshare -n scripts/smoke-offline.sh ./dataql
 
+  selfcontained-build:
+    name: Self-contained release build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      # Build with the same flags the release uses: DuckDB engine embedded
+      # (no noduckdb stub), glibc dynamic, C++/gcc runtimes static. Then prove
+      # the release-style binary is self-contained by running the smoke with the
+      # network disabled.
+      - name: Build release-style binary (DuckDB embedded)
+        run: >
+          CGO_ENABLED=1 go build
+          -ldflags '-s -w -linkmode external -extldflags "-static-libgcc -static-libstdc++"'
+          -o dataql-release ./main.go
+
+      - name: Offline smoke against release binary
+        run: sudo unshare -n scripts/smoke-offline.sh ./dataql-release
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

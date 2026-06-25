@@ -11,22 +11,19 @@ permissions:
 jobs:
   release:
     name: Release
+    # Build natively on glibc (not Alpine/musl) so the DuckDB engine is embedded
+    # in the released binary. ubuntu-latest ships gcc/g++ for CGO.
     runs-on: ubuntu-latest
-    container:
-      # Use Alpine for musl-based static binaries (no GLIBC dependency)
-      image: golang:1.26-alpine
     steps:
-      - name: Install build dependencies
-        run: |
-          apk add --no-cache git gcc musl-dev g++ make
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Fix git safe directory
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6

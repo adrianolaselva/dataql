@@ -23,9 +23,9 @@
 
 ## 5. E2E harness standardization
 
-- [ ] 5.1 Consolidate `e2e/` to one `make e2e` entrypoint that brings up docker-compose, runs the suite, and tears down.
-- [ ] 5.2 Audit current E2E coverage and add tests so every shipped source/feature (files, URL, S3, GCS, Azure, Postgres, MySQL, Mongo, DynamoDB, SQS, Kafka, exports, describe, cache, REPL, MCP) is exercised against a real/emulated backend.
-- [ ] 5.3 Add an E2E CI job (advisory first, then blocking) and a check that flags shipped sources lacking E2E coverage.
+- [x] 5.1 Add a single root `make e2e` entrypoint (build → provision via docker-compose → run suite → tear down) with teardown-always and exit-status propagation (no silent `|| true` pass).
+- [~] 5.2 Audited E2E coverage into `e2e/COVERAGE.md`. Covered today: Postgres, MySQL, Mongo, Kafka, SQS, S3, DynamoDB, install. **Remaining backfill (tracked):** URL, GCS (fake-gcs-server), Azure (azurite), file-format E2E, and promoting export/describe/cache/MCP from unit to E2E. RabbitMQ/Pulsar are roadmap milestone 5.
+- [~] 5.3 Added an **advisory** `e2e` CI job (`make e2e`). Becomes blocking once the COVERAGE.md gaps close and the suite is stable; the gap list in COVERAGE.md serves as the coverage check until automated.
 
 ## 6. Aggressive modernization (one risky bump per task)
 

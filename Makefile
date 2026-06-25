@@ -23,7 +23,7 @@ endif
         build-linux build-linux-arm64 build-darwin build-darwin-arm64 build-windows \
         build-all install install-local uninstall release-dry-run docker-build \
         verify verify-binary fmt fmt-check hooks hooks-remove check \
-        e2e-up e2e-down e2e-logs e2e-status e2e-clean e2e-test e2e-wait e2e-reset \
+        e2e e2e-up e2e-down e2e-logs e2e-status e2e-clean e2e-test e2e-wait e2e-reset \
         e2e-test-scripts e2e-test-postgres e2e-test-mysql e2e-test-mongodb \
         e2e-test-kafka e2e-test-s3 e2e-test-sqs e2e-test-install
 
@@ -181,6 +181,17 @@ verify:
 E2E_DIR=e2e
 E2E_COMPOSE=docker-compose -f $(E2E_DIR)/docker-compose.yaml -p dataql-e2e
 E2E_ENV_FILE=$(E2E_DIR)/.env
+
+# Single entrypoint: provision services, run the full E2E suite, tear down.
+# Teardown always runs; the suite's exit status is propagated (no silent pass).
+e2e: build
+	@echo "=== E2E: provisioning services ==="
+	@$(MAKE) e2e-up
+	@echo "=== E2E: running suite ==="
+	@$(MAKE) e2e-test-scripts; status=$$?; \
+		echo "=== E2E: tearing down ==="; \
+		$(MAKE) e2e-down; \
+		exit $$status
 
 # Start e2e infrastructure
 e2e-up:

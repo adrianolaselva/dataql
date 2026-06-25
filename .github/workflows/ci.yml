@@ -125,3 +125,20 @@ jobs:
 
       - name: gosec
         run: go run github.com/securego/gosec/v2/cmd/gosec@latest ./...
+
+  e2e:
+    name: E2E (advisory)
+    runs-on: ubuntu-latest
+    # Advisory until the coverage gaps in e2e/COVERAGE.md close and the suite is
+    # stable in CI; then this becomes a blocking gate (task 5.3).
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Run E2E suite
+        run: make e2e

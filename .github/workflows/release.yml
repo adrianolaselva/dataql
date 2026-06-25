@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       # Use Alpine for musl-based static binaries (no GLIBC dependency)
-      image: golang:1.24-alpine
+      image: golang:1.26-alpine
     steps:
       - name: Install build dependencies
         run: |

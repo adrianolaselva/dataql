@@ -44,6 +44,16 @@ if [ -n "$json_file" ]; then
   pass "JSON query via embedded DuckDB"
 fi
 
+# 3b. Query a Parquet fixture — proves the bundled columnar format support
+#     works offline (no extension download).
+parquet_file="$(find "$FIXTURES/parquet" -maxdepth 1 -name '*.parquet' ! -name 'empty*' | head -1)"
+if [ -n "$parquet_file" ]; then
+  ptable="$(basename "$parquet_file" .parquet)"
+  "$BIN" run -Q -f "$parquet_file" -q "SELECT COUNT(*) AS n FROM \"$ptable\"" >/dev/null 2>&1 \
+    || fail "Parquet query failed for $parquet_file"
+  pass "Parquet query via embedded DuckDB"
+fi
+
 # 4. Export to a different format — exercises the export path offline.
 tmp_out="$(mktemp).csv"
 "$BIN" run -Q -f "$FIXTURES/csv/customers.csv" \

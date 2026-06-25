@@ -12,9 +12,9 @@
 
 ## 3. Self-contained runtime (embed DuckDB + extensions)
 
-- [ ] 3.1 Identify the DuckDB extensions DataQL actually uses (start: httpfs, parquet, json) and embed/preload them so no runtime download occurs.
-- [ ] 3.2 Replace the release build's `noduckdb` tag with a portable static CGO build using a pinned Zig cross compiler (`CC="zig cc -target ..."`) in `.goreleaser.yml`; keep `noduckdb` for dev/test only.
-- [ ] 3.3 Build a release binary for linux amd64/arm64 and confirm DuckDB is embedded (engine-included build, not the stub).
+- [x] 3.1 Verified DuckDB format support (CSV, JSON, Parquet) is already built into the bundled go-duckdb engine — local/Parquet queries succeed offline (proven by the offline smoke). DataQL uses its own S3/GCS/Azure handlers, not DuckDB `httpfs`, so no extension needs separate embedding for the current feature set. No runtime download path exists for local formats.
+- [~] 3.2 The default `go build` already produces a self-contained, DuckDB-included binary (this is what the offline smoke validates). Only the **musl/Alpine linux release** sets `noduckdb`, because go-duckdb's prebuilt static lib is glibc-based and won't link under musl. Switching the release to a glibc + Zig static build is a toolchain spike that needs the actual zig/goreleaser toolchain to validate (not available locally). **Pending CI validation — not landed to avoid breaking the working release.** Release Go image bumped 1.24→1.26.
+- [ ] 3.3 Produce and verify a self-contained linux amd64/arm64 **release** binary with DuckDB embedded (depends on 3.2's toolchain spike; validate via `goreleaser build --snapshot` + offline smoke in CI).
 
 ## 4. Offline self-sufficiency smoke test
 
@@ -37,6 +37,6 @@
 
 ## 7. Documentation & wrap-up
 
-- [ ] 7.1 Document the harness (coverage ratchet, linters, govulncheck, E2E, offline smoke) and the modernization in CONTRIBUTING.md / docs.
-- [ ] 7.2 Note any BREAKING CLI/output changes surfaced by modernization.
-- [ ] 7.3 Run `openspec validate quality-harness-and-modernization --strict` and confirm all gates are green before archiving.
+- [x] 7.1 Documented the quality gates (ratchet, lint, govulncheck, offline smoke, gosec/E2E advisory) in CONTRIBUTING.md; invariants in AGENTS.md/CLAUDE.md.
+- [x] 7.2 No BREAKING CLI/output changes surfaced — all upgrades built and tested green with identical behavior (full test suite + lint + offline smoke).
+- [ ] 7.3 Run `openspec validate --strict` and archive once the remaining items (3.2/3.3 release spike, 5.2/5.3 E2E backfill, gosec hardening) land. Validation passes now; archiving is deferred until those close.

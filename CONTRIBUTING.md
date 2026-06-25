@@ -198,13 +198,32 @@ e2e/
 
 5. **Update documentation** if needed
 
+### Quality gates (CI)
+
+Every PR runs these gates. They are designed so quality only ever ratchets up:
+
+| Gate | What it enforces | Run locally |
+|------|------------------|-------------|
+| Build | `go build ./...` compiles | `make build` |
+| Tests | unit/integration tests pass (`-race`) | `make test` |
+| Coverage ratchet | total coverage never drops below `.coverage-baseline` | `make coverage-check` |
+| Lint | `golangci-lint` (govet, staticcheck SA*, errcheck, …) — blocking | `make lint` |
+| Vulnerability scan | `govulncheck` finds no called-path vulnerabilities — blocking | `go run golang.org/x/vuln/cmd/govulncheck@latest ./...` |
+| Offline self-sufficiency | binary runs with the network disabled (no runtime downloads) | `scripts/smoke-offline.sh` |
+| Security (gosec) | advisory; backlog being triaged | `go run github.com/securego/gosec/v2/cmd/gosec@latest ./...` |
+| E2E | advisory; full suite against emulated backends | `make e2e` |
+
+When you add tests that raise coverage, run `make coverage-bump` and commit the
+updated `.coverage-baseline`.
+
 ### PR Requirements
 
 - All CI checks must pass
 - E2E tests must have been run locally (include confirmation in PR description)
 - Code follows existing patterns and style
 - New features have corresponding tests
-- Commit messages are clear and descriptive
+- New features preserve the self-contained invariant (embedded, offline; see AGENTS.md)
+- Commit messages are clear and descriptive (Conventional Commits)
 
 ### PR Description Template
 

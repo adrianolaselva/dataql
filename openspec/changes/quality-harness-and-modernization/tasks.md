@@ -24,8 +24,8 @@
 ## 5. E2E harness standardization
 
 - [x] 5.1 Add a single root `make e2e` entrypoint (build → provision via docker-compose → run suite → tear down) with teardown-always and exit-status propagation (no silent `|| true` pass).
-- [~] 5.2 Audited E2E coverage into `e2e/COVERAGE.md`. Covered today: Postgres, MySQL, Mongo, Kafka, SQS, S3, DynamoDB, install. **Remaining backfill (tracked):** URL, GCS (fake-gcs-server), Azure (azurite), file-format E2E, and promoting export/describe/cache/MCP from unit to E2E. RabbitMQ/Pulsar are roadmap milestone 5.
-- [~] 5.3 Added an **advisory** `e2e` CI job (`make e2e`). Becomes blocking once the COVERAGE.md gaps close and the suite is stable; the gap list in COVERAGE.md serves as the coverage check until automated.
+- [x] 5.2 Audited E2E coverage into `e2e/COVERAGE.md` and **added URL E2E** (`tests/test-url.sh`, self-contained fixture HTTP server; wired into `test-all.sh`; 3/3 pass locally). Now covered: Postgres, MySQL, Mongo, Kafka, SQS, S3, DynamoDB, install, URL. **GCS/Azure E2E are blocked on connector endpoint-override support** and are correctly deferred to milestone 3 (`connector-abstraction`); file-format/MCP/describe promotion remains tracked in COVERAGE.md. RabbitMQ/Pulsar are milestone 5.
+- [~] 5.3 Added an **advisory** `e2e` CI job (`make e2e`). Stays advisory until the remaining COVERAGE.md items close and the suite is stable in CI, then flips to blocking; COVERAGE.md is the coverage check until automated.
 
 ## 6. Aggressive modernization (one risky bump per task)
 

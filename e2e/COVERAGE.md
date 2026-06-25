@@ -17,10 +17,10 @@ Legend: ✅ covered by an E2E script · 🟡 covered only by unit tests · ❌ g
 | SQS | ✅ | LocalStack | `tests/test-sqs.sh` |
 | S3 | ✅ | LocalStack | `tests/test-s3.sh` |
 | DynamoDB | ✅ | LocalStack | `tests/test-dynamodb.sh` |
+| URL (http) | ✅ | local HTTP server | `tests/test-url.sh` (self-contained fixture server) |
 | Local files | 🟡 | n/a | Per-format unit tests in `pkg/filehandler/*`; no dedicated E2E script yet |
-| URL (http) | ❌ | — | No E2E; needs a fixture HTTP server |
-| GCS | ❌ | — | No emulator in compose (`fake-gcs-server` candidate) |
-| Azure Blob | ❌ | — | No emulator in compose (`azurite` candidate) |
+| GCS | ❌ | — | **Blocked**: `gcshandler` has no custom-endpoint support, so a `fake-gcs-server` emulator can't be targeted. Needs connector endpoint override → roadmap milestone 3 (`connector-abstraction`) |
+| Azure Blob | ❌ | — | **Blocked**: `azurehandler` hardcodes `*.blob.core.windows.net`, so `azurite` can't be targeted. Needs connector endpoint override → roadmap milestone 3 |
 | RabbitMQ | ❌ | — | Source not yet implemented (roadmap milestone 5) |
 | Apache Pulsar | ❌ | — | Source not yet implemented (roadmap milestone 5) |
 
@@ -39,13 +39,13 @@ Legend: ✅ covered by an E2E script · 🟡 covered only by unit tests · ❌ g
 
 To reach "E2E for every shipped source", the following are the known gaps:
 
-1. **GCS** — add `fakegcs` (fsouza/fake-gcs-server) to `docker-compose.yaml` and a
-   `tests/test-gcs.sh`.
-2. **Azure Blob** — add `azurite` to compose and a `tests/test-azure.sh`.
-3. **URL** — add a static HTTP fixture server and a `tests/test-url.sh`.
-4. **File formats** — add an E2E script asserting each format round-trips through
+1. **GCS / Azure Blob** — blocked on connector endpoint-override support (the
+   handlers can't target an emulator yet). Add `fake-gcs-server` / `azurite` to
+   compose and `tests/test-gcs.sh` / `tests/test-azure.sh` once milestone 3
+   (`connector-abstraction`) adds endpoint configuration.
+2. **File formats** — add an E2E script asserting each format round-trips through
    `dataql run` (currently unit-only).
-5. **MCP / describe / cache / export** — promote from unit to E2E assertions.
+3. **MCP / describe / cache / export** — promote from unit to E2E assertions.
 
 The E2E CI job is **advisory** until these gaps close and the suite is stable
 in CI, after which it becomes a blocking gate (task 5.3).

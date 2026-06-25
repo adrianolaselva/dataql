@@ -59,6 +59,26 @@ jobs:
           files: ./coverage.out
           fail_ci_if_error: false
 
+  offline-smoke:
+    name: Offline self-sufficiency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      # Build with network available (module download), then prove the binary
+      # works with the network fully disabled — no runtime downloads, no
+      # external services. This guards the self-contained invariant.
+      - name: Build binary
+        run: go build -o dataql ./main.go
+
+      - name: Smoke with network disabled
+        run: sudo unshare -n scripts/smoke-offline.sh ./dataql
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

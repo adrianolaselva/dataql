@@ -18,8 +18,8 @@
 
 ## 4. Offline self-sufficiency smoke test
 
-- [ ] 4.1 Add a smoke test that runs core commands (file query, bundled-extension op, `--version`, `mcp serve` smoke) with networking disabled and no external services.
-- [ ] 4.2 Add a CI job that runs the smoke test against the engine-included build and gates the release.
+- [x] 4.1 Add `scripts/smoke-offline.sh` running core commands (version, CSV + JSON query via embedded DuckDB, export, `mcp serve`) with no external services. Passes locally. (Extension-dependent ops like httpfs/remote-parquet are exercised once task 3.1 embeds those extensions.)
+- [x] 4.2 Add blocking `offline-smoke` CI job that builds the binary then runs the smoke under `sudo unshare -n` (network fully disabled), proving self-sufficiency.
 
 ## 5. E2E harness standardization
 

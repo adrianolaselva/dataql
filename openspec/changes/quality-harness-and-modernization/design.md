@@ -10,7 +10,9 @@ self-contained promise real and permanent while raising the quality floor.
 
 Current state we build on:
 - CI: `build`, `test` (race + coverage, no gate), `lint` (golangci-lint v2 with
-  many high-value linters disabled). Coverage ~70.7%.
+  many high-value linters disabled). Honest total coverage is **~23.7%** over
+  all packages — the previously committed `coverage.out` (70.7%) was generated
+  over a cherry-picked subset and overstated reality.
 - E2E: `e2e/` with docker-compose, Makefile, scripts — present but not wired as
   a gating CI job and unevenly covering sources.
 - Go 1.24; DuckDB, AWS SDK and other deps trailing current releases.

@@ -42,6 +42,20 @@ For test coverage:
 make coverage
 ```
 
+#### Coverage ratchet (never regress)
+
+Total coverage must never drop below the committed baseline in
+`.coverage-baseline`. CI enforces this on every PR. The baseline only ever
+moves up, on the path to the >= 90% target.
+
+```bash
+make coverage-check   # fail if coverage < baseline (what CI runs)
+make coverage-bump    # raise the baseline after you add tests
+```
+
+If you add tests that raise coverage, run `make coverage-bump` and commit the
+updated `.coverage-baseline` so the gain is locked in.
+
 #### E2E Tests (Integration Tests)
 
 E2E tests are **critical** for ensuring DataQL works correctly with all supported data sources. They must be run locally before submitting any PR.

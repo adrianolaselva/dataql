@@ -23,3 +23,4 @@ cp.out
 !tests/fixtures/**/*.json
 
 dataql
+coverage.out

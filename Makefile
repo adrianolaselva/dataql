@@ -41,6 +41,16 @@ coverage:
 	go test -v -race -coverprofile=.tmp/coverage.out ./...
 	go tool cover -html=.tmp/coverage.out -o .tmp/coverage.html
 
+# Coverage ratchet: fail if total coverage drops below .coverage-baseline.
+coverage-check:
+	go test -coverprofile=coverage.out ./...
+	COVERAGE_FILE=coverage.out scripts/coverage-ratchet.sh check
+
+# Raise the committed baseline to the current coverage (only ever moves up).
+coverage-bump:
+	go test -coverprofile=coverage.out ./...
+	COVERAGE_FILE=coverage.out scripts/coverage-ratchet.sh bump
+
 lint:
 	golangci-lint run ./...
 

@@ -1,8 +1,8 @@
 ## 1. Coverage ratchet
 
-- [ ] 1.1 Add a committed coverage baseline file recording current total coverage (`go test -coverprofile` → `go tool cover -func` total).
-- [ ] 1.2 Add a `make coverage-check` target + script that fails when total coverage < baseline, and a `make coverage-bump` to raise it.
-- [ ] 1.3 Wire the coverage check into `ci.yml` as a blocking step; document the bump workflow in CONTRIBUTING.md.
+- [x] 1.1 Add a committed coverage baseline file recording current total coverage (`go test -coverprofile` → `go tool cover -func` total). Baseline measured at **23.7%** over all packages (the previously committed 70.7% was generated over a cherry-picked subset and is not representative).
+- [x] 1.2 Add a `make coverage-check` target + script that fails when total coverage < baseline, and a `make coverage-bump` to raise it. (`scripts/coverage-ratchet.sh`, `.coverage-baseline`).
+- [x] 1.3 Wire the coverage check into `ci.yml` as a blocking step; document the bump workflow in CONTRIBUTING.md.
 
 ## 2. Static analysis hardening (phased)
 

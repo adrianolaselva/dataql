@@ -117,7 +117,9 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.1.6
+          # Must be built with Go >= the go.mod toolchain (1.26); older
+          # prebuilt binaries refuse to load a newer module.
+          version: v2.12.2
 
   vuln:
     name: Vulnerability scan

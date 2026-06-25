@@ -39,4 +39,4 @@
 
 - [x] 7.1 Documented the quality gates (ratchet, lint, govulncheck, offline smoke, gosec/E2E advisory) in CONTRIBUTING.md; invariants in AGENTS.md/CLAUDE.md.
 - [x] 7.2 No BREAKING CLI/output changes surfaced — all upgrades built and tested green with identical behavior (full test suite + lint + offline smoke).
-- [ ] 7.3 Run `openspec validate --strict` and archive once the remaining items (3.2/3.3 release spike, 5.2/5.3 E2E backfill, gosec hardening) land. Validation passes now; archiving is deferred until those close.
+- [~] 7.3 `openspec validate --strict` passes; all local gates green (lint, govulncheck, gosec, offline smoke, coverage ratchet, self-contained build). Only two items remain and both need a merged PR / live CI: flip the `e2e` job to blocking once stable in CI (5.3), then archive the change.

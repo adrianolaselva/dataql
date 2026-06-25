@@ -7,8 +7,8 @@
 ## 2. Static analysis hardening (phased)
 
 - [x] 2.1 Add `govulncheck` as a new blocking CI job. Cleared all 15 affected-path vulns via security upgrades (Go toolchain 1.24→1.26.4, mapstructure v2.2.1→v2.5.0, x/net→v0.56.0); govulncheck now reports 0 affected vulnerabilities.
-- [x] 2.2 Measured the backlog: errcheck 50, gosec 21, staticcheck 7 (govet/errorlint/misspell already clean). gosec runs as an advisory (non-blocking) CI job pending security triage.
-- [x] 2.3 Flipped **govet, staticcheck (SA*), and errcheck** to blocking in `.golangci.yml` (0 issues): fixed 7 staticcheck items + 7 unchecked `Scan()` silent failures in describe stats; excluded opt-in QF*/style ST checks and non-actionable Close/print returns. **gosec remains advisory** — G110/G115 (real) + G304/G201/G204 (inherent to a file/SQL tool) to be hardened in a focused follow-up.
+- [x] 2.2 Measured the backlog: errcheck 50, gosec 21, staticcheck 7 (govet/errorlint/misspell already clean). gosec fully triaged — see 2.3.
+- [x] 2.3 Flipped **govet, staticcheck (SA*), errcheck, and gosec** to blocking (0 issues): fixed 7 staticcheck items + 7 unchecked `Scan()` silent failures; fixed both real G115 integer-overflow conversions (storage/type, dynamodb); justified G204 (constant `gh` executable) and G110 (user's own local files) with documented `#nosec`; excluded inherent-to-local-CLI rules (G104/G201/G304/G301/G306) via `scripts/gosec.sh` with recorded rationale; excluded opt-in QF*/style ST checks and non-actionable Close/print returns in `.golangci.yml`.
 
 ## 3. Self-contained runtime (embed DuckDB + extensions)
 

@@ -311,7 +311,8 @@ func DecompressFile(filePath string) (string, error) {
 		return "", fmt.Errorf("unsupported compression: %s", compression)
 	}
 
-	// Copy decompressed data to temp file
+	// Copy decompressed data to temp file.
+	// #nosec G110 -- input is the user's own local file, not untrusted network data.
 	if _, err := io.Copy(tempFile, reader); err != nil {
 		os.Remove(tempFile.Name())
 		return "", fmt.Errorf("failed to decompress file: %w", err)

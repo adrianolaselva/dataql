@@ -210,7 +210,7 @@ Every PR runs these gates. They are designed so quality only ever ratchets up:
 | Lint | `golangci-lint` (govet, staticcheck SA*, errcheck, …) — blocking | `make lint` |
 | Vulnerability scan | `govulncheck` finds no called-path vulnerabilities — blocking | `go run golang.org/x/vuln/cmd/govulncheck@latest ./...` |
 | Offline self-sufficiency | binary runs with the network disabled (no runtime downloads) | `scripts/smoke-offline.sh` |
-| Security (gosec) | advisory; backlog being triaged | `go run github.com/securego/gosec/v2/cmd/gosec@latest ./...` |
+| Security (gosec) | blocking; inherent-rule exclusions documented in `scripts/gosec.sh` | `scripts/gosec.sh` |
 | E2E | advisory; full suite against emulated backends | `make e2e` |
 
 When you add tests that raise coverage, run `make coverage-bump` and commit the

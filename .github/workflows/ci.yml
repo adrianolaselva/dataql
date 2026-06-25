@@ -110,11 +110,8 @@ jobs:
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   gosec:
-    name: Security scan (advisory)
+    name: Security scan
     runs-on: ubuntu-latest
-    # Advisory only for now: gosec findings are being triaged and hardened in a
-    # focused phase (see openspec change quality-harness-and-modernization).
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -124,7 +121,7 @@ jobs:
           go-version: '1.26'
 
       - name: gosec
-        run: go run github.com/securego/gosec/v2/cmd/gosec@latest ./...
+        run: scripts/gosec.sh
 
   e2e:
     name: E2E (advisory)

@@ -1,0 +1,60 @@
+schema: spec-driven
+
+# Project context shown to AI when creating artifacts.
+context: |
+  ## What DataQL is
+  DataQL is a Go CLI that queries and manipulates data from files and remote
+  sources using SQL. It loads data into an embedded DuckDB engine (in-memory or
+  file-backed) with automatic type inference. It is designed to be LLM-native:
+  agents (Claude Code, Codex, opencode) get small query results instead of raw
+  data, and DataQL ships a built-in MCP server plus installable skills.
+
+  ## Stack & layout
+  - Language: Go (currently 1.24; modernization target: latest stable Go).
+  - Engine: embedded DuckDB via github.com/marcboeker/go-duckdb (CGO).
+  - Module: github.com/adrianolaselva/dataql
+  - Entry: main.go -> cmd/ (cobra commands: run, describe, cache, mcp, skills).
+  - Connectors & handlers live in pkg/ (dbconnector, s3handler, gcshandler,
+    azurehandler, mqreader, filehandler, exportdata, repl, cachehandler, ...).
+  - Core domain logic in internal/dataql, internal/exportdata.
+  - Tests: unit tests alongside code; e2e/ holds docker-compose-driven E2E.
+  - CI: .github/workflows (build.yml, ci.yml, release.yml). Lint via
+    .golangci.yml (golangci-lint v2). Release via .goreleaser.yml.
+
+  ## Already implemented (do not rebuild)
+  - Sources: local files, URLs, S3, GCS, Azure Blob, PostgreSQL, MySQL,
+    MongoDB, DynamoDB, SQS, Kafka.
+  - Formats: CSV, JSON, Parquet, Excel, XML, YAML, Avro, ORC; compressed
+    (gzip, bzip2, xz).
+  - Features: parameterized queries, describe (exploratory stats), data cache,
+    multiple export formats (incl. markdown/HTML), REPL, MCP server, skills.
+
+  ## Conventions
+  - Conventional Commits (e.g. feat(scope):, fix(scope):, chore(scope):).
+  - Table-driven tests with testify. Prefer small, single-purpose packages
+    with well-defined interfaces.
+  - Keep changes scoped; follow existing patterns in the touched package.
+
+  ## Project invariants (must never regress)
+  1. Self-contained / batteries-included: installing DataQL must install
+     everything needed to run it. The binary embeds DuckDB and its extensions
+     (httpfs, parquet, json, ...) and all source drivers/SDKs - no runtime
+     downloads, works fully offline, no external services. Every new feature or
+     source ships embedded the same way. Enforced by an offline smoke test.
+  2. Quality never regresses: test coverage is ratcheted (CI fails if it drops
+     below the recorded baseline) on the path to >= 90%. Static analysis and
+     vulnerability scanning gate every PR.
+  3. LLM-obvious: every user-facing feature ships docs and MCP tool/skill
+     descriptions clear enough for an LLM to use without guesswork.
+
+  ## Roadmap
+  See openspec/roadmap.md for the sequenced milestones.
+
+# Per-artifact rules (optional)
+rules:
+  proposal:
+    - Always include a "Non-goals" section.
+    - State explicitly how the change preserves the self-contained invariant.
+  tasks:
+    - Each task must be independently verifiable (a command or check to run).
+    - Risky dependency upgrades go in their own isolated, verifiable task.

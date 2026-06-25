@@ -10,7 +10,7 @@
 # - Consumer group configuration
 # - Message metadata access
 
-set -e
+set +e  # do not abort the suite on a single non-zero command; tests track pass/fail via counters
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 E2E_DIR="$(dirname "$SCRIPT_DIR")"
@@ -63,8 +63,8 @@ setup_kafka_messages() {
     echo '{"id":2,"name":"Bob","email":"bob@example.com","age":35}' | docker exec -i dataql-kafka kafka-console-producer --bootstrap-server localhost:9092 --topic dataql-test-topic 2>/dev/null || true
     echo '{"id":3,"name":"Charlie","email":"charlie@example.com","age":42}' | docker exec -i dataql-kafka kafka-console-producer --bootstrap-server localhost:9092 --topic dataql-test-topic 2>/dev/null || true
 
-    # Give Kafka a moment to process
-    sleep 1
+    # Give Kafka time to commit the messages so the first consumer read sees them.
+    sleep 5
 
     log_pass "Kafka messages setup complete"
 }
@@ -75,7 +75,13 @@ setup_kafka_messages() {
 
 test_basic_read() {
     log_info "Test: SELECT * FROM topic (peek mode)"
-    result=$($DATAQL_BIN run -q "SELECT * FROM dataql_test_topic" -f "$DATAQL_TEST_KAFKA_URL" 2>&1)
+    # Retry: the very first consume can race with message availability.
+    local result=""
+    for _ in 1 2 3; do
+        result=$($DATAQL_BIN run -q "SELECT * FROM dataql_test_topic" -f "$DATAQL_TEST_KAFKA_URL" 2>&1)
+        if echo "$result" | grep -q -E "(Alice|Bob|Charlie|name)"; then break; fi
+        sleep 2
+    done
     if echo "$result" | grep -q -E "(Alice|Bob|Charlie|name)"; then
         log_pass "Basic Kafka read works (peek mode)"
     else

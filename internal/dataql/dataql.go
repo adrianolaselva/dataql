@@ -1422,9 +1422,10 @@ func (d *dataQL) getColumnStats(tableName, columnName, dataType string) *columnS
 	nullRows, err := d.storage.Query(nullQuery)
 	if err == nil && nullRows.Next() {
 		var nullCount int64
-		nullRows.Scan(&nullCount)
-		stats.Nulls = nullCount
-		nullRows.Close()
+		if scanErr := nullRows.Scan(&nullCount); scanErr == nil {
+			stats.Nulls = nullCount
+		}
+		_ = nullRows.Close()
 	}
 
 	// Get unique count
@@ -1432,9 +1433,10 @@ func (d *dataQL) getColumnStats(tableName, columnName, dataType string) *columnS
 	uniqueRows, err := d.storage.Query(uniqueQuery)
 	if err == nil && uniqueRows.Next() {
 		var uniqueCount int64
-		uniqueRows.Scan(&uniqueCount)
-		stats.Unique = uniqueCount
-		uniqueRows.Close()
+		if scanErr := uniqueRows.Scan(&uniqueCount); scanErr == nil {
+			stats.Unique = uniqueCount
+		}
+		_ = uniqueRows.Close()
 	}
 
 	// Check if numeric type for min/max/mean/std
@@ -1447,11 +1449,10 @@ func (d *dataQL) getColumnStats(tableName, columnName, dataType string) *columnS
 		minRows, err := d.storage.Query(minQuery)
 		if err == nil && minRows.Next() {
 			var minVal interface{}
-			minRows.Scan(&minVal)
-			if minVal != nil {
+			if scanErr := minRows.Scan(&minVal); scanErr == nil && minVal != nil {
 				stats.Min = minVal
 			}
-			minRows.Close()
+			_ = minRows.Close()
 		}
 
 		// Get max
@@ -1459,11 +1460,10 @@ func (d *dataQL) getColumnStats(tableName, columnName, dataType string) *columnS
 		maxRows, err := d.storage.Query(maxQuery)
 		if err == nil && maxRows.Next() {
 			var maxVal interface{}
-			maxRows.Scan(&maxVal)
-			if maxVal != nil {
+			if scanErr := maxRows.Scan(&maxVal); scanErr == nil && maxVal != nil {
 				stats.Max = maxVal
 			}
-			maxRows.Close()
+			_ = maxRows.Close()
 		}
 	}
 
@@ -1473,11 +1473,10 @@ func (d *dataQL) getColumnStats(tableName, columnName, dataType string) *columnS
 		meanRows, err := d.storage.Query(meanQuery)
 		if err == nil && meanRows.Next() {
 			var meanVal interface{}
-			meanRows.Scan(&meanVal)
-			if meanVal != nil {
+			if scanErr := meanRows.Scan(&meanVal); scanErr == nil && meanVal != nil {
 				stats.Mean = fmt.Sprintf("%.2f", meanVal)
 			}
-			meanRows.Close()
+			_ = meanRows.Close()
 		}
 
 		// Get standard deviation
@@ -1485,11 +1484,10 @@ func (d *dataQL) getColumnStats(tableName, columnName, dataType string) *columnS
 		stdRows, err := d.storage.Query(stdQuery)
 		if err == nil && stdRows.Next() {
 			var stdVal interface{}
-			stdRows.Scan(&stdVal)
-			if stdVal != nil {
+			if scanErr := stdRows.Scan(&stdVal); scanErr == nil && stdVal != nil {
 				stats.Std = fmt.Sprintf("%.2f", stdVal)
 			}
-			stdRows.Close()
+			_ = stdRows.Close()
 		}
 	}
 
@@ -1548,9 +1546,10 @@ func (d *dataQL) saveCacheMetadata() error {
 		countRows, err := d.storage.Query(fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName))
 		if err == nil && countRows.Next() {
 			var count int64
-			countRows.Scan(&count)
-			totalRows += count
-			countRows.Close()
+			if scanErr := countRows.Scan(&count); scanErr == nil {
+				totalRows += count
+			}
+			_ = countRows.Close()
 		}
 	}
 	rows.Close()

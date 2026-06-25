@@ -184,7 +184,7 @@ func (h *AzureHandler) initClient(loc *AzureLocation) error {
 		return nil
 	}
 
-	return fmt.Errorf("Azure credentials not found. Set AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_KEY")
+	return fmt.Errorf("azure credentials not found: set AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_KEY")
 }
 
 // Cleanup removes all downloaded temp files

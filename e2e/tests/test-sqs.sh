@@ -69,7 +69,7 @@ log_section() {
 check_localstack() {
     log_info "Checking LocalStack SQS availability..."
 
-    if ! curl -s "${AWS_ENDPOINT_URL}/_localstack/health" | grep -q "running"; then
+    if ! curl -sf "${AWS_ENDPOINT_URL}/_localstack/health" >/dev/null 2>&1; then
         echo -e "${RED}LocalStack is not running. Skipping SQS tests.${NC}"
         return 1
     fi

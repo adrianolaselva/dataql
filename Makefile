@@ -240,7 +240,13 @@ e2e-wait:
 	@timeout 90 bash -c 'until docker exec dataql-kafka kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1; do sleep 2; done' || (echo "Kafka timeout" && exit 1)
 	@echo "✓ Kafka ready"
 	@echo "Waiting for LocalStack..."
-	@timeout 60 bash -c 'until curl -s http://localhost:24566/_localstack/health | grep -q "running"; do sleep 2; done' || (echo "LocalStack timeout" && exit 1)
+	@# Readiness = the edge health endpoint responds. Services are lazy-loaded
+	@# (they report "available", not "running", until first used), so don't grep
+	@# for "running" here or it would never match.
+	@timeout 120 bash -c 'until curl -sf http://localhost:24566/_localstack/health > /dev/null 2>&1; do sleep 2; done' || (echo "LocalStack timeout" && exit 1)
+	@# Then wait for the init scripts to finish provisioning resources
+	@# (bucket/queues/tables). The init endpoint reports {"completed": {"READY": true}}.
+	@timeout 60 bash -c 'until curl -sf http://localhost:24566/_localstack/init 2>/dev/null | grep -q "\"READY\": true"; do sleep 2; done' || echo "  (init readiness not confirmed; tests will verify resources)"
 	@echo "✓ LocalStack ready"
 	@echo "Waiting for Redis..."
 	@timeout 30 bash -c 'until docker exec dataql-redis redis-cli ping > /dev/null 2>&1; do sleep 2; done' || (echo "Redis timeout" && exit 1)

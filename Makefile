@@ -1,3 +1,7 @@
+# Use bash for recipes: several E2E targets use `source`, which the default
+# /bin/sh (dash on Debian/Ubuntu CI) does not provide.
+SHELL := /usr/bin/env bash
+
 PROJECT_NAME=dataql
 PROJECT_VENDOR=adrianolaselva
 VERSION=latest

@@ -24,8 +24,9 @@
 ## 5. E2E harness standardization
 
 - [x] 5.1 Add a single root `make e2e` entrypoint (build → provision via docker-compose → run suite → tear down) with teardown-always and exit-status propagation (no silent `|| true` pass).
-- [x] 5.2 Audited E2E coverage into `e2e/COVERAGE.md` and **added URL E2E** (`tests/test-url.sh`, self-contained fixture HTTP server; wired into `test-all.sh`; 3/3 pass locally). Now covered: Postgres, MySQL, Mongo, Kafka, SQS, S3, DynamoDB, install, URL. **GCS/Azure E2E are blocked on connector endpoint-override support** and are correctly deferred to milestone 3 (`connector-abstraction`); file-format/MCP/describe promotion remains tracked in COVERAGE.md. RabbitMQ/Pulsar are milestone 5.
-- [~] 5.3 Added an **advisory** `e2e` CI job (`make e2e`). Stays advisory until the remaining COVERAGE.md items close and the suite is stable in CI, then flips to blocking; COVERAGE.md is the coverage check until automated.
+- [x] 5.2 Audited E2E coverage into `e2e/COVERAGE.md` and **added URL E2E**; the whole suite (Postgres, MySQL, Mongo, Kafka, SQS, S3, DynamoDB, install, URL) **passes green in CI**. Stabilizing it required fixing real harness/test issues (Compose v2, LocalStack readiness, `bash` recipes, `set +e`, Kafka read retry) **and a real product bug the harness caught** (see 5.4). GCS/Azure E2E stay deferred to milestone 3 (need connector endpoint-override); RabbitMQ/Pulsar are milestone 5.
+- [~] 5.3 Added the `e2e` CI job (`make e2e`); it is **green in CI**. Kept `continue-on-error` for now so transient infra flakiness can't block unrelated PRs; flip to a hard gate once it has a stable green history.
+- [x] 5.4 **Bug found by the harness & fixed:** importing from SQL databases (Postgres/MySQL) and MongoDB created every column as VARCHAR, so `WHERE age > 30`, `SUM(age)`, etc. failed. Mapped source column types (SQL) and inferred types from values (Mongo) onto the existing typed-storage path (`BuildStructureWithTypes` + `InsertRowWithCoercion`). Validated locally against Postgres and MongoDB and green in the E2E suite. Unit test added for the type mapper.
 
 ## 6. Aggressive modernization (one risky bump per task)
 

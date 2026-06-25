@@ -179,7 +179,9 @@ verify:
 # ============================================
 
 E2E_DIR=e2e
-E2E_COMPOSE=docker-compose -f $(E2E_DIR)/docker-compose.yaml -p dataql-e2e
+# Prefer Docker Compose v2 (`docker compose`); fall back to the v1 binary.
+DOCKER_COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
+E2E_COMPOSE=$(DOCKER_COMPOSE) -f $(E2E_DIR)/docker-compose.yaml -p dataql-e2e
 E2E_ENV_FILE=$(E2E_DIR)/.env
 
 # Single entrypoint: provision services, run the full E2E suite, tear down.

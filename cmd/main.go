@@ -7,6 +7,7 @@ import (
 	"github.com/adrianolaselva/dataql/cmd/dataqlctl"
 	"github.com/adrianolaselva/dataql/cmd/describectl"
 	"github.com/adrianolaselva/dataql/cmd/mcpctl"
+	"github.com/adrianolaselva/dataql/cmd/setupctl"
 	"github.com/adrianolaselva/dataql/cmd/skillsctl"
 	"github.com/adrianolaselva/dataql/internal/dataql"
 	"github.com/spf13/cobra"
@@ -76,6 +77,9 @@ func (c *cliBase) Execute() error {
 
 	// Add MCP server command for LLM integration
 	c.rootCmd.AddCommand(mcpctl.New().Command())
+
+	// Add setup command to auto-configure agents (MCP server)
+	c.rootCmd.AddCommand(setupctl.New().Command())
 
 	// Add cache management command
 	c.rootCmd.AddCommand(cachectl.New().Command())

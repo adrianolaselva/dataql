@@ -21,8 +21,8 @@ avoid writing speculative specs that go stale).
 
 | # | Change | Status | Summary |
 |---|--------|--------|---------|
-| 1 | `quality-harness-and-modernization` | **detailed — next to implement** | Test/quality harness (coverage ratchet, hardened static analysis, govulncheck, standardized E2E infra, offline self-sufficiency smoke test) **plus** aggressive modernization (latest Go, DuckDB, AWS SDK and other libs to current majors; renovate/dependabot). Foundation before features. |
-| 2 | `distribution-and-install` | planned | One-line install (script + Homebrew tap + `go install`) that auto-configures MCP + skills; complete Docker image published to GHCR; "stupidly simple" quickstart; agent usage guides (Claude Code, Codex, opencode). |
+| 1 | `quality-harness-and-modernization` | **✅ done (PR #52, archived)** | Test/quality harness (coverage ratchet, hardened static analysis, govulncheck, standardized E2E infra, offline self-sufficiency smoke test) **plus** aggressive modernization (latest Go, AWS SDK and other libs; dependabot) and a self-contained release binary with DuckDB embedded. Bonus: fixed a real DB numeric-type import bug the harness caught. |
+| 2 | `distribution-and-install` | **detailed — implementing** | One-line install (script + Homebrew tap + `go install`) that auto-configures MCP + skills; complete Docker image published to GHCR; arm64 binaries; "stupidly simple" quickstart; agent usage guides (Claude Code, Codex, opencode). |
 | 3 | `connector-abstraction` | planned | Unify the existing source connectors behind one interface (consistent auth, pagination, errors, tests, docs). All connectors compiled into the binary. Base for adding sources without regression. |
 | 4 | `streaming-mode` | planned | First-class streaming: continuous consumption from topics/queues to stdout or windowed SQL. |
 | 5 | `source-pulsar`, `source-rabbitmq` | planned | New embedded sources that are still missing (Kafka, SQS, S3, Postgres, MySQL, DynamoDB, Mongo already exist). |

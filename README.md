@@ -79,8 +79,13 @@ dataql run -f sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY regi
 ## Quick Start
 
 ```bash
-# Install DataQL
+# Install DataQL (also: `go install github.com/adrianolaselva/dataql@latest`,
+# or `docker run --rm -v "$PWD":/data ghcr.io/adrianolaselva/dataql ...`)
 curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash
+
+# (Optional) wire DataQL into your AI agents (Claude Code, Codex, opencode).
+# The install script already runs this for you.
+dataql setup
 
 # Query a CSV file
 dataql run -f data.csv -q "SELECT * FROM data WHERE amount > 100"
@@ -181,6 +186,19 @@ curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/
 ```powershell
 irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
 ```
+
+### Run with Docker
+
+DataQL ships as a self-contained image (DuckDB embedded, runs offline). Mount a
+directory and query it — no install needed:
+
+```bash
+docker build -t dataql .   # or: make docker-build
+docker run --rm -v "$PWD":/data dataql run -f /data/sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY region"
+```
+
+> A published image (`ghcr.io/adrianolaselva/dataql`) is added by the
+> distribution milestone; until then, build locally as above.
 
 ### Install Options
 

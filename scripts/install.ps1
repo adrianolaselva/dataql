@@ -37,7 +37,8 @@ param(
     [string]$Version = $env:DATAQL_VERSION,
     [string]$InstallDir = $env:DATAQL_INSTALL_DIR,
     [switch]$UserInstall = [bool]$env:DATAQL_USER_INSTALL,
-    [switch]$Force = [bool]$env:DATAQL_FORCE
+    [switch]$Force = [bool]$env:DATAQL_FORCE,
+    [switch]$NoSetup = [bool]$env:DATAQL_NO_SETUP
 )
 
 # Configuration
@@ -314,6 +315,15 @@ function Install-DataQL {
                 Write-Host ""
             }
 
+            # Auto-configure AI agents (MCP server) unless opted out. Local-only
+            # and idempotent; no-ops when no agent is present.
+            if (-not $NoSetup) {
+                Write-Host ""
+                Write-Host "Configuring AI agents (MCP server)..."
+                try { & $installedBinary setup } catch { Write-Warning "Agent setup skipped (run '$Script:BinaryName setup' later)" }
+            }
+
+            Write-Host ""
             Write-Host "Get started:"
             Write-Host "  $Script:BinaryName --help" -ForegroundColor Cyan
             Write-Host "  $Script:BinaryName run -f data.csv -q `"SELECT * FROM data`"" -ForegroundColor Cyan

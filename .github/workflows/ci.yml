@@ -103,6 +103,20 @@ jobs:
       - name: Offline smoke against release binary
         run: sudo unshare -n scripts/smoke-offline.sh ./dataql-release
 
+  docker:
+    name: Docker image (self-contained)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t dataql:ci --build-arg VERSION=ci .
+
+      - name: Offline query through the image
+        run: |
+          docker run --rm --network none -v "$PWD/tests/fixtures/csv":/data \
+            dataql:ci run -Q -f /data/customers.csv -q "SELECT COUNT(*) AS n FROM customers"
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

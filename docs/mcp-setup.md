@@ -22,6 +22,18 @@ dataql --version
 
 ## Quick Setup
 
+### One command (recommended)
+
+```bash
+dataql setup
+```
+
+This registers the DataQL MCP server for every supported agent it finds on your
+machine (Claude Code, Codex, opencode). It is idempotent, merges into existing
+configuration without overwriting anything, and makes no network calls. Use
+`dataql setup --dry-run` to preview, or `--agent claude|codex|opencode` to scope
+it. The sections below document the equivalent manual configuration.
+
 ### Claude Code
 
 Add to `~/.claude/settings.json`:

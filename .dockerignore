@@ -1,0 +1,17 @@
+# The image build only needs Go source + go.mod/go.sum + embedded assets.
+.git
+.github
+.serena
+.claude
+.codex
+.opencode
+openspec
+docs
+e2e
+tests
+bin
+build
+.tmp
+coverage.out
+/dataql
+*.md

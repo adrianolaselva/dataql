@@ -26,6 +26,8 @@ type Params struct {
 	MaxMessages int           // Stop after N messages (0 = unlimited)
 	Duration    time.Duration // Stop after this much time (0 = unlimited)
 	IdleTimeout time.Duration // Stop when no message arrives for this period (0 = disabled)
+	Window      string        // Rolling window: a count (e.g. "100") or a duration (e.g. "30s"); empty = emit mode
+	Interval    time.Duration // How often to run the windowed query and emit (default 2s in window mode)
 }
 
 // FileInput represents a file path with an optional table alias

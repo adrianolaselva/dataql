@@ -143,6 +143,10 @@ func (c *dataQlCtl) Command() (*cobra.Command, error) {
 		DurationVar(&c.params.Duration, "duration", 0, "stop streaming after this duration, e.g. 30s (0 = unlimited)")
 	command.PersistentFlags().
 		DurationVar(&c.params.IdleTimeout, "idle-timeout", 0, "stop streaming when no message arrives for this duration (0 = disabled)")
+	command.PersistentFlags().
+		StringVar(&c.params.Window, "window", "", "windowed mode: keep a rolling window of N messages (e.g. 100) or a duration (e.g. 30s) and re-run -q over it")
+	command.PersistentFlags().
+		DurationVar(&c.params.Interval, "interval", 0, "how often to run the windowed query and emit results (default 2s in --window mode)")
 
 	// Note: file flag is no longer required if storage flag points to existing DuckDB file
 	// Validation is done in runE to allow querying existing DuckDB files

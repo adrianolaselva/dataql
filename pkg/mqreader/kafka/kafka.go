@@ -165,10 +165,11 @@ func (r *KafkaReader) Peek(ctx context.Context, maxMessages int) ([]mqreader.Mes
 	return messages, nil
 }
 
-// Stream continuously consumes new messages from the topic, committing offsets
-// so the stream advances (at-least-once delivery). It uses a stable consumer
-// group and tails from the latest offset (only messages produced after the
-// stream starts). The returned channel is closed when ctx is cancelled.
+// Stream continuously consumes messages from the topic, committing offsets so
+// the stream advances (at-least-once delivery) and resumes where it left off
+// across runs rather than replaying. It uses a stable consumer group; a brand
+// new group starts from the earliest available offset so no message is missed.
+// The returned channel is closed when ctx is cancelled.
 func (r *KafkaReader) Stream(ctx context.Context) (<-chan mqreader.Message, error) {
 	groupID := r.consumerGroup
 	if groupID == "" {
@@ -182,7 +183,7 @@ func (r *KafkaReader) Stream(ctx context.Context) (<-chan mqreader.Message, erro
 		MinBytes:    1,
 		MaxBytes:    10e6,
 		MaxWait:     r.waitTimeout,
-		StartOffset: kafka.LastOffset, // live tail: only messages produced after start
+		StartOffset: kafka.FirstOffset, // new group: from the start; existing group resumes from committed offset
 	})
 
 	out := make(chan mqreader.Message, 64)

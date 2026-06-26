@@ -144,7 +144,7 @@ dataql run -f data.csv
 - Google Cloud Storage
 - Azure Blob Storage
 - Standard input (stdin)
-- Message Queues — Kafka, Amazon SQS (peek without consuming). RabbitMQ & Pulsar are on the roadmap.
+- Message Queues — Kafka, Amazon SQS: peek (one-shot) **or stream continuously** with `--follow` (emit + windowed SQL). RabbitMQ & Pulsar are on the roadmap.
 
 **Database Connectors:**
 - PostgreSQL
@@ -382,6 +382,27 @@ dataql run -f data.jsonl
 | `--collection` | `-c` | Custom table name | Filename |
 
 ### Examples
+
+**Stream a queue/topic (`--follow`):**
+
+```bash
+# Emit each message as JSON as it arrives (tail -f for Kafka/SQS)
+dataql run -f kafka://broker:9092/events --follow --max-messages 100
+
+# Rolling SQL over a window: re-run the query every 2s over the last 1000 messages
+dataql run -f kafka://broker:9092/logs --follow \
+  --window 1000 --interval 2s \
+  -q "SELECT level, COUNT(*) AS n FROM stream GROUP BY level ORDER BY n DESC"
+
+# A time window + idle/duration stops (great for sampling and scripts)
+dataql run -f "sqs://my-queue?region=us-east-1" --follow \
+  --window 30s --idle-timeout 10s --duration 5m \
+  -q "SELECT COUNT(*) AS events_30s FROM stream"
+```
+
+> `--follow` consumes (advances the offset / deletes messages). The window table
+> is named `stream`. Stop with `Ctrl-C`, `--max-messages`, `--duration`, or
+> `--idle-timeout`.
 
 **Exploratory statistics (`describe`):**
 

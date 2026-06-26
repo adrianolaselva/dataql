@@ -155,8 +155,16 @@ uninstall:
 release-dry-run:
 	goreleaser release --snapshot --clean
 
+DOCKER_IMAGE ?= $(PROJECT_VENDOR)/$(PROJECT_NAME)
+DOCKER_TAG ?= local
+
 docker-build:
-	docker build --rm -f "Dockerfile" -t "$(PROJECT_VENDOR)/$(PROJECT_NAME):$(release)" "." --build-arg VERSION=$(release)
+	docker build --rm -f "Dockerfile" -t "$(DOCKER_IMAGE):$(DOCKER_TAG)" "." --build-arg VERSION=$(DOCKER_TAG)
+
+# Build the image and prove it runs a query offline (no network, no services).
+docker-smoke: docker-build
+	docker run --rm --network none -v "$(PWD)/tests/fixtures/csv":/data \
+		"$(DOCKER_IMAGE):$(DOCKER_TAG)" run -Q -f /data/customers.csv -q "SELECT COUNT(*) AS n FROM customers"
 
 clean:
 	rm -rf $(PROJECT_NAME) $(PROJECT_NAME).exe dist/ .tmp/

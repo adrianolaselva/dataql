@@ -1,22 +1,45 @@
-FROM golang:1.18.3-stretch as builder
+# DataQL — self-contained image. The DuckDB engine and all source drivers are
+# embedded in the binary; only glibc + libstdc++ (present in debian-slim) are
+# needed at runtime. Built on glibc (not Alpine/musl) so go-duckdb's prebuilt
+# static library links.
 
-ARG VERSION
+# ---- builder ----
+FROM golang:1.26-bookworm AS builder
 
-ENV VERSION=$VERSION
-ENV GOOS=linux
-ENV CGO_ENABLED=0
+ARG VERSION=dev
+ARG COMMIT=docker
+ARG BUILD_DATE=unknown
 
-WORKDIR /app
+WORKDIR /src
 
-ADD go.mod go.sum ./
+# Cache modules first.
+COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=1 GOOS=linux go build -a -ldflags="-s -w" -o csvql ./
+# CGO build with the DuckDB engine embedded (no noduckdb stub). Link the C++/gcc
+# runtimes statically; glibc/libstdc++ resolve at runtime.
+RUN CGO_ENABLED=1 go build \
+    -ldflags="-s -w -linkmode external -extldflags '-static-libgcc -static-libstdc++' \
+      -X github.com/adrianolaselva/dataql/cmd.Version=${VERSION} \
+      -X github.com/adrianolaselva/dataql/cmd.Commit=${COMMIT} \
+      -X github.com/adrianolaselva/dataql/cmd.BuildDate=${BUILD_DATE}" \
+    -o /out/dataql ./main.go
 
-FROM debian:sid-slim
+# ---- runtime ----
+FROM debian:bookworm-slim
 
-WORKDIR /app
+# ca-certificates lets remote sources (https URLs, S3, ...) verify TLS. This is
+# OS metadata baked into the image, not a runtime download.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder ./app/csvql .
+COPY --from=builder /out/dataql /usr/local/bin/dataql
+
+# Default working directory for mounted data: `docker run -v "$PWD":/data ...`.
+WORKDIR /data
+
+ENTRYPOINT ["dataql"]
+CMD ["--help"]

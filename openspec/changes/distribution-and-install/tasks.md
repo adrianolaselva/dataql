@@ -1,8 +1,8 @@
 ## 1. Docker image (self-contained, validated in CI)
 
-- [ ] 1.1 Rewrite `Dockerfile`: minimal glibc runtime (`debian:bookworm-slim`), COPY the release `dataql` binary, `ENTRYPOINT ["dataql"]`, `WORKDIR /data`. Remove the stale `csvql`/Go-1.18 build.
-- [ ] 1.2 Add a CI job that builds the image (no push) and runs an offline query through it (`docker run … run -f … -q …`), gating regressions.
-- [ ] 1.3 Update `make docker-build` to build the new image and document `docker run` usage.
+- [x] 1.1 Rewrote `Dockerfile`: multi-stage glibc build (golang:1.26-bookworm → debian:bookworm-slim) with DuckDB embedded (release ldflags), `ENTRYPOINT ["dataql"]`, `WORKDIR /data`, ca-certificates. Added `.dockerignore`. **Validated locally**: 252MB image; `--version`, a mounted-CSV query, and a `--network none` GROUP BY query all work.
+- [x] 1.2 Added a `docker` CI job that builds the image (no push) and runs an **offline** (`--network none`) query through it.
+- [x] 1.3 Updated `make docker-build` (+ `make docker-smoke`) and added a "Run with Docker" section to the README.
 
 ## 2. `dataql setup` command (agent auto-config)
 

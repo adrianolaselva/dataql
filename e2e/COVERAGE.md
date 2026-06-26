@@ -13,7 +13,7 @@ Legend: ✅ covered by an E2E script · 🟡 covered only by unit tests · ❌ g
 | PostgreSQL | ✅ | `postgres` container | `tests/test-postgres.sh` |
 | MySQL | ✅ | `mysql` container | `tests/test-mysql.sh` |
 | MongoDB | ✅ | `mongodb` container | `tests/test-mongodb.sh` |
-| Kafka | ✅ | `kafka` container | `tests/test-kafka.sh` |
+| Kafka | ✅ | `kafka` container | `tests/test-kafka.sh` (peek) + `tests/test-streaming.sh` (`--follow` emit + windowed SQL) |
 | SQS | ✅ | LocalStack | `tests/test-sqs.sh` |
 | S3 | ✅ | LocalStack | `tests/test-s3.sh` |
 | DynamoDB | ✅ | LocalStack | `tests/test-dynamodb.sh` |

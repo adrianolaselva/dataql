@@ -25,6 +25,7 @@ func init() {
 // KafkaReader implements MessageQueueReader for Apache Kafka
 type KafkaReader struct {
 	reader        *kafka.Reader
+	streamReader  *kafka.Reader
 	brokers       []string
 	topic         string
 	consumerGroup string
@@ -164,6 +165,48 @@ func (r *KafkaReader) Peek(ctx context.Context, maxMessages int) ([]mqreader.Mes
 	return messages, nil
 }
 
+// Stream continuously consumes messages from the topic, committing offsets so
+// the stream advances (at-least-once delivery) and resumes where it left off
+// across runs rather than replaying. It uses a stable consumer group; a brand
+// new group starts from the earliest available offset so no message is missed.
+// The returned channel is closed when ctx is cancelled.
+func (r *KafkaReader) Stream(ctx context.Context) (<-chan mqreader.Message, error) {
+	groupID := r.consumerGroup
+	if groupID == "" {
+		groupID = fmt.Sprintf("dataql-stream-%s", r.topic)
+	}
+
+	r.streamReader = kafka.NewReader(kafka.ReaderConfig{
+		Brokers:     r.brokers,
+		Topic:       r.topic,
+		GroupID:     groupID,
+		MinBytes:    1,
+		MaxBytes:    10e6,
+		MaxWait:     r.waitTimeout,
+		StartOffset: kafka.FirstOffset, // new group: from the start; existing group resumes from committed offset
+	})
+
+	out := make(chan mqreader.Message, 64)
+	go func() {
+		defer close(out)
+		for {
+			msg, err := r.streamReader.FetchMessage(ctx)
+			if err != nil {
+				return // ctx cancelled or fatal error: end the stream
+			}
+			select {
+			case out <- convertKafkaMessage(msg, r.topic):
+				// Commit with a non-cancellable context so cancellation doesn't
+				// abort the commit of an already-delivered message (at-least-once).
+				_ = r.streamReader.CommitMessages(context.WithoutCancel(ctx), msg)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return out, nil
+}
+
 // GetMetadata returns information about the topic
 func (r *KafkaReader) GetMetadata(ctx context.Context) (*mqreader.QueueMetadata, error) {
 	if !r.connected {
@@ -223,6 +266,11 @@ func (r *KafkaReader) GetMetadata(ctx context.Context) (*mqreader.QueueMetadata,
 func (r *KafkaReader) Close() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	if r.streamReader != nil {
+		_ = r.streamReader.Close()
+		r.streamReader = nil
+	}
 
 	if r.reader != nil {
 		err := r.reader.Close()

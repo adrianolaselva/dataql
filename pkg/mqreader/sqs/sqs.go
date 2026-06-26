@@ -216,6 +216,55 @@ func (r *SQSReader) Peek(ctx context.Context, maxMessages int) ([]mqreader.Messa
 	return allMessages, nil
 }
 
+// Stream continuously consumes messages from the queue, deleting each after it
+// is delivered (at-least-once). It long-polls so it blocks cheaply when the
+// queue is empty. The returned channel is closed when ctx is cancelled.
+func (r *SQSReader) Stream(ctx context.Context) (<-chan mqreader.Message, error) {
+	if !r.connected {
+		if err := r.Connect(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	waitSecs := r.waitTimeSeconds
+	if waitSecs <= 0 {
+		waitSecs = 5 // long-poll to avoid busy-spinning on an empty queue
+	}
+
+	out := make(chan mqreader.Message, 64)
+	go func() {
+		defer close(out)
+		for ctx.Err() == nil {
+			output, err := r.client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
+				QueueUrl:              aws.String(r.queueURL),
+				MaxNumberOfMessages:   int32(mqreader.MaxMessagesPerSQSRequest),
+				VisibilityTimeout:     30, // hide in-flight messages while we process them
+				WaitTimeSeconds:       waitSecs,
+				AttributeNames:        []types.QueueAttributeName{types.QueueAttributeNameAll},
+				MessageAttributeNames: []string{"All"},
+			})
+			if err != nil {
+				return // ctx cancelled or fatal error
+			}
+			for _, msg := range output.Messages {
+				select {
+				case out <- convertSQSMessage(msg, r.queueURL):
+					// Consume: delete with a non-cancellable context so
+					// cancellation doesn't abort the delete of an already-
+					// delivered message (at-least-once).
+					_, _ = r.client.DeleteMessage(context.WithoutCancel(ctx), &sqs.DeleteMessageInput{
+						QueueUrl:      aws.String(r.queueURL),
+						ReceiptHandle: msg.ReceiptHandle,
+					})
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+	return out, nil
+}
+
 // GetMetadata returns information about the queue
 func (r *SQSReader) GetMetadata(ctx context.Context) (*mqreader.QueueMetadata, error) {
 	if !r.connected {

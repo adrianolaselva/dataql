@@ -152,6 +152,7 @@ run_test_suite "MongoDB" "$SCRIPT_DIR/test-mongodb.sh" || true
 
 # Message queues
 run_test_suite "Kafka" "$SCRIPT_DIR/test-kafka.sh" || true
+run_test_suite "Streaming" "$SCRIPT_DIR/test-streaming.sh" || true
 
 # AWS services (LocalStack)
 run_test_suite "S3" "$SCRIPT_DIR/test-s3.sh" || true

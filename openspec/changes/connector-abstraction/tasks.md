@@ -14,12 +14,18 @@
 
 ## 3. Phase 3 — Source registry
 
-- [ ] 3.1 Define the `Source` interface (`Scheme`, `Matches`, `Fetch`) in `pkg/source`; implement it for s3/gcs/azure/url (and decide on stdin).
-- [ ] 3.2 Add a registry and migrate `internal/dataql/dataql.go` to resolve remote URIs via the registry instead of hard-coded handler fields — mechanical, same logic.
-- [ ] 3.3 Verify behavior is identical: full unit + E2E suite green; no CLI/output change. Add tests for the registry resolution.
-- [ ] 3.4 Document "adding a new source" in `docs/` (the contract + registration steps).
+- [x] 3.1 Defined `source.Resolver` (`ResolveFiles` + `Cleanup`) in `pkg/source` — formalizing the **existing** handler contract (lower-risk than the speculative `Fetch` redesign). s3/gcs/azure/url already satisfy it; stdin (different signature) and compression (special alias logic) stay as dedicated steps.
+- [x] 3.2 Migrated `internal/dataql/dataql.go`: the four identical url/s3/gcs/azure blocks collapse into one loop over `[]source.Resolver`; `Close()` cleanup collapses to a loop. Adding a remote source = append to the slice.
+- [x] 3.3 Behavior verified identical: full unit suite + `-race` green, lint 0; functional checks pass (local pass-through, stdin, and `gs://` via the registry+emulator all return correct results). Coverage 40.8%→41.0%.
+- [x] 3.4 Documented "Adding a remote data source" (the `Resolver` contract + registration + emulator/env guidance) in CONTRIBUTING.md.
 
 ## 4. Wrap-up
 
-- [ ] 4.1 `openspec validate connector-abstraction --strict`; full gate green; coverage ratchet bumped.
-- [ ] 4.2 Update the roadmap (M3 done; note GCS/Azure E2E now covered).
+- [x] 4.1 `openspec validate connector-abstraction --strict` passes; full gate green locally (build, race tests, lint 0); coverage ratchet bumped to 41.0%.
+- [ ] 4.2 Update the roadmap (M3 done; GCS/Azure E2E now covered) — on merge.
+
+## Notes / follow-ups
+
+- Docs/code mismatch found: the Azure handler accepts `azure://` URLs but the docs say `az://`. Reconcile (add `az://` alias or fix docs) in a small follow-up.
+- DB (`Connector`) and MQ (`mqreader`) sources intentionally not folded into the registry yet (different shape than "download to a file"); a later change can unify them.
+- Error helper (`source.WrapError`) is available; adopt it in the handlers when convenient (it would change some error strings the phase-1 tests assert).

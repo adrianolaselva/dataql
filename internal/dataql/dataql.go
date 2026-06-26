@@ -36,6 +36,7 @@ import (
 	"github.com/adrianolaselva/dataql/pkg/queryerror"
 	"github.com/adrianolaselva/dataql/pkg/repl"
 	"github.com/adrianolaselva/dataql/pkg/s3handler"
+	"github.com/adrianolaselva/dataql/pkg/source"
 	"github.com/adrianolaselva/dataql/pkg/stdinhandler"
 	"github.com/adrianolaselva/dataql/pkg/storage"
 	"github.com/adrianolaselva/dataql/pkg/storage/duckdb"
@@ -69,10 +70,7 @@ type dataQL struct {
 	bar                *progressbar.ProgressBar
 	params             Params
 	fileHandler        filehandler.FileHandler
-	urlHandler         *urlhandler.URLHandler
-	s3Handler          *s3handler.S3Handler
-	gcsHandler         *gcshandler.GCSHandler
-	azureHandler       *azurehandler.AzureHandler
+	remoteResolvers    []source.Resolver
 	stdinHandler       *stdinhandler.StdinHandler
 	compressionHandler *compressionhandler.CompressionHandler
 	cacheHandler       *cachehandler.CacheHandler
@@ -123,63 +121,28 @@ func New(params Params) (DataQL, error) {
 	}
 	params.FileInputs = resolvedFiles
 
-	// Create URL handler to resolve any HTTP/HTTPS URLs in the file inputs
+	// Remote source resolvers: each replaces the URIs it owns (HTTP/HTTPS, S3,
+	// GCS, Azure Blob) with local file paths and passes everything else through.
+	// They are run in order via the registry; adding a remote source is a matter
+	// of registering its resolver here — no other engine change is needed.
 	urlH := urlhandler.NewURLHandler()
-
-	// Check if any file inputs are HTTP/HTTPS URLs and download them
-	verboseLog(params.Verbose, "Resolving HTTP/HTTPS URLs...")
-	resolvedFiles, err = urlH.ResolveFiles(params.FileInputs)
-	if err != nil {
-		_ = stdinH.Cleanup()
-		_ = urlH.Cleanup() // Clean up any downloaded files on error
-		return nil, fmt.Errorf("failed to resolve file inputs: %w", err)
-	}
-	params.FileInputs = resolvedFiles
-
-	// Create S3 handler to resolve any S3 URLs
 	s3H := s3handler.NewS3Handler()
-
-	// Check if any file inputs are S3 URLs and download them
-	verboseLog(params.Verbose, "Resolving S3 URLs...")
-	resolvedFiles, err = s3H.ResolveFiles(params.FileInputs)
-	if err != nil {
-		_ = stdinH.Cleanup()
-		_ = urlH.Cleanup()
-		_ = s3H.Cleanup()
-		return nil, fmt.Errorf("failed to resolve S3 inputs: %w", err)
-	}
-	params.FileInputs = resolvedFiles
-
-	// Create GCS handler to resolve any GCS URLs
 	gcsH := gcshandler.NewGCSHandler()
-
-	// Check if any file inputs are GCS URLs and download them
-	verboseLog(params.Verbose, "Resolving GCS URLs...")
-	resolvedFiles, err = gcsH.ResolveFiles(params.FileInputs)
-	if err != nil {
-		_ = stdinH.Cleanup()
-		_ = urlH.Cleanup()
-		_ = s3H.Cleanup()
-		_ = gcsH.Cleanup()
-		return nil, fmt.Errorf("failed to resolve GCS inputs: %w", err)
-	}
-	params.FileInputs = resolvedFiles
-
-	// Create Azure handler to resolve any Azure Blob URLs
 	azureH := azurehandler.NewAzureHandler()
+	remoteResolvers := []source.Resolver{urlH, s3H, gcsH, azureH}
 
-	// Check if any file inputs are Azure URLs and download them
-	verboseLog(params.Verbose, "Resolving Azure Blob URLs...")
-	resolvedFiles, err = azureH.ResolveFiles(params.FileInputs)
-	if err != nil {
-		_ = stdinH.Cleanup()
-		_ = urlH.Cleanup()
-		_ = s3H.Cleanup()
-		_ = gcsH.Cleanup()
-		_ = azureH.Cleanup()
-		return nil, fmt.Errorf("failed to resolve Azure inputs: %w", err)
+	verboseLog(params.Verbose, "Resolving remote inputs (HTTP/S3/GCS/Azure)...")
+	for _, r := range remoteResolvers {
+		resolvedFiles, err = r.ResolveFiles(params.FileInputs)
+		if err != nil {
+			_ = stdinH.Cleanup()
+			for _, rr := range remoteResolvers {
+				_ = rr.Cleanup()
+			}
+			return nil, fmt.Errorf("failed to resolve remote inputs: %w", err)
+		}
+		params.FileInputs = resolvedFiles
 	}
-	params.FileInputs = resolvedFiles
 	verboseLog(params.Verbose, "Resolved file inputs: %v", params.FileInputs)
 
 	// Create compression handler to decompress any compressed files
@@ -339,10 +302,7 @@ func New(params Params) (DataQL, error) {
 		bar:                bar,
 		fileHandler:        handler,
 		storage:            duckDBStorage,
-		urlHandler:         urlH,
-		s3Handler:          s3H,
-		gcsHandler:         gcsH,
-		azureHandler:       azureH,
+		remoteResolvers:    remoteResolvers,
 		stdinHandler:       stdinH,
 		compressionHandler: compressionH,
 		cacheHandler:       cacheH,
@@ -613,24 +573,9 @@ func (d *dataQL) Close() error {
 		_ = d.stdinHandler.Cleanup()
 	}
 
-	// Clean up any downloaded temp files from HTTP/HTTPS URLs
-	if d.urlHandler != nil {
-		_ = d.urlHandler.Cleanup()
-	}
-
-	// Clean up any downloaded temp files from S3
-	if d.s3Handler != nil {
-		_ = d.s3Handler.Cleanup()
-	}
-
-	// Clean up any downloaded temp files from GCS
-	if d.gcsHandler != nil {
-		_ = d.gcsHandler.Cleanup()
-	}
-
-	// Clean up any downloaded temp files from Azure
-	if d.azureHandler != nil {
-		_ = d.azureHandler.Cleanup()
+	// Clean up any downloaded temp files from the remote resolvers (HTTP/S3/GCS/Azure)
+	for _, r := range d.remoteResolvers {
+		_ = r.Cleanup()
 	}
 
 	// Clean up any decompressed temp files

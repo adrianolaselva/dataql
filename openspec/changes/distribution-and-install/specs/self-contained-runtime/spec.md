@@ -1,9 +1,9 @@
 ## ADDED Requirements
 
 ### Requirement: All distribution artifacts are self-contained
-Every published distribution artifact — the Docker image and the per-arch
-(amd64/arm64) release binaries — SHALL embed the DuckDB engine and pass the
-offline self-sufficiency check. No published artifact may rely on a runtime
+Every published distribution artifact SHALL embed the DuckDB engine and pass the
+offline self-sufficiency check. This covers the Docker image and the per-arch
+(amd64/arm64) release binaries. No published artifact MUST rely on a runtime
 download or external service for core functionality.
 
 #### Scenario: Docker image runs offline

@@ -18,7 +18,7 @@ Legend: ✅ covered by an E2E script · 🟡 covered only by unit tests · ❌ g
 | S3 | ✅ | LocalStack | `tests/test-s3.sh` |
 | DynamoDB | ✅ | LocalStack | `tests/test-dynamodb.sh` |
 | URL (http) | ✅ | local HTTP server | `tests/test-url.sh` (self-contained fixture server) |
-| Local files | 🟡 | n/a | Per-format unit tests in `pkg/filehandler/*`; no dedicated E2E script yet |
+| Local files (all formats) | ✅ | local fixtures | `tests/test-formats.sh` runs the binary against CSV/JSON/JSONL/Parquet/Excel/XML/YAML/Avro/ORC fixtures; plus per-format unit tests in `pkg/filehandler/*` |
 | GCS | ❌ | — | **Blocked**: `gcshandler` has no custom-endpoint support, so a `fake-gcs-server` emulator can't be targeted. Needs connector endpoint override → roadmap milestone 3 (`connector-abstraction`) |
 | Azure Blob | ❌ | — | **Blocked**: `azurehandler` hardcodes `*.blob.core.windows.net`, so `azurite` can't be targeted. Needs connector endpoint override → roadmap milestone 3 |
 | RabbitMQ | ❌ | — | Source not yet implemented (roadmap milestone 5) |
@@ -43,9 +43,7 @@ To reach "E2E for every shipped source", the following are the known gaps:
    handlers can't target an emulator yet). Add `fake-gcs-server` / `azurite` to
    compose and `tests/test-gcs.sh` / `tests/test-azure.sh` once milestone 3
    (`connector-abstraction`) adds endpoint configuration.
-2. **File formats** — add an E2E script asserting each format round-trips through
-   `dataql run` (currently unit-only).
-3. **MCP / describe / cache / export** — promote from unit to E2E assertions.
+2. **MCP / describe / cache / export** — promote from unit to E2E assertions.
 
 The E2E CI job is **advisory** until these gaps close and the suite is stable
 in CI, after which it becomes a blocking gate (task 5.3).

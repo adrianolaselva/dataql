@@ -13,10 +13,10 @@
 
 ## 3. E2E format matrix
 
-- [ ] 3.1 Add an E2E test that runs the real `dataql` binary to query each shipped file format (csv, json, jsonl, parquet, excel, xml, yaml, avro, orc) from `tests/fixtures`, asserting row counts/values.
-- [ ] 3.2 Wire it into the suite and `e2e/COVERAGE.md` (mark file-format E2E covered).
+- [x] 3.1 Added `e2e/tests/test-formats.sh` running the binary against CSV/JSON/JSONL/Parquet/Excel/XML/YAML/Avro/ORC fixtures (9/9 pass locally).
+- [x] 3.2 Wired into `test-all.sh` ("Formats" suite) and marked file-format E2E covered in `e2e/COVERAGE.md`.
 
 ## 4. Wrap-up
 
-- [ ] 4.1 `openspec validate expand-test-coverage --strict`; full gate green.
+- [x] 4.1 `openspec validate expand-test-coverage --strict` passes; full gate green locally (build, race tests, lint 0, coverage ratchet at 37.4%).
 - [ ] 4.2 Follow-up noted: `sqlite.NewSqLiteStorage(":memory:")` opens a pool without `SetMaxOpenConns(1)`/shared-cache, so multi-connection in-memory use can hit independent DBs (surfaced during export round-trip tests). Track for a storage hardening change.

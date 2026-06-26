@@ -159,6 +159,9 @@ run_test_suite "SQS" "$SCRIPT_DIR/test-sqs.sh" || true
 run_test_suite "DynamoDB" "$SCRIPT_DIR/test-dynamodb.sh" || true
 run_test_suite "URL" "$SCRIPT_DIR/test-url.sh" || true
 
+# File-format matrix (no services required)
+run_test_suite "Formats" "$SCRIPT_DIR/test-formats.sh" || true
+
 # Print summary
 print_summary
 

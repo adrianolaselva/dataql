@@ -37,15 +37,33 @@ if [ -z "$CONNSTR" ]; then
   exit 0
 fi
 
-# Seed: container + blob (idempotent).
+# Wait briefly for azurite to accept connections (the blob endpoint returns 400
+# for an unauthenticated root GET, which still proves it is listening).
+AZURITE_HOST="${AZURITE_HOST:-127.0.0.1}"; AZURITE_PORT="${AZURITE_PORT:-20000}"
+ready=false
+for _ in $(seq 1 15); do
+  if curl -s -o /dev/null "http://${AZURITE_HOST}:${AZURITE_PORT}/devstoreaccount1" 2>/dev/null; then ready=true; break; fi
+  sleep 2
+done
+if [ "$ready" != "true" ]; then
+  echo -e "  ${YELLOW}[SKIP]${NC} azurite not reachable at ${AZURITE_HOST}:${AZURITE_PORT}"
+  exit 0
+fi
+
+# Seed: container + blob (idempotent). Surface az errors to the log to aid
+# diagnosis; still skip (advisory) rather than fail the whole suite on a seed
+# hiccup.
 tmp="$(mktemp).csv"; printf 'id,name,age\n1,Alice,28\n2,Bob,35\n3,Charlie,42\n' > "$tmp"
 az storage container create --name "$CONTAINER" --connection-string "$CONNSTR" >/dev/null 2>&1
-if ! az storage blob upload --container-name "$CONTAINER" --name simple.csv --file "$tmp" \
-       --connection-string "$CONNSTR" --overwrite >/dev/null 2>&1; then
-  echo -e "  ${YELLOW}[SKIP]${NC} azurite not reachable / seed failed"
-  rm -f "$tmp"; exit 0
-fi
+seed_out="$(az storage blob upload --container-name "$CONTAINER" --name simple.csv --file "$tmp" \
+              --connection-string "$CONNSTR" --overwrite 2>&1)"
+seed_rc=$?
 rm -f "$tmp"
+if [ "$seed_rc" -ne 0 ]; then
+  echo -e "  ${YELLOW}[SKIP]${NC} azurite seed via az CLI failed:"
+  echo "$seed_out" | tail -3 | sed 's/^/         /'
+  exit 0
+fi
 
 out="$("$DATAQL_BIN" run -Q -f "azure://${CONTAINER}/simple.csv" \
         -q "SELECT name, age FROM simple WHERE age > 30" 2>/dev/null)"

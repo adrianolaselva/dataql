@@ -7,7 +7,7 @@
 #   DATAQL_BIN=/path/to/dataql ./test-install.sh
 #
 
-set -e
+set +e  # do not abort the suite on a single non-zero command; tests track pass/fail via counters
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 E2E_DIR="$(dirname "$SCRIPT_DIR")"

@@ -95,19 +95,17 @@ func (m *mongoHandler) Import() error {
 		columns[i] = m.sanitizeName(col.Name)
 	}
 
-	// Build table structure
-	if err := m.storage.BuildStructure(m.sanitizeName(collectionName), columns); err != nil {
-		return fmt.Errorf("failed to build structure: %w", err)
-	}
-
 	// Read data from the collection
 	docs, err := connector.ReadCollection(m.connInfo.Collection, m.limitLines)
 	if err != nil {
 		return fmt.Errorf("failed to read collection: %w", err)
 	}
 
-	// Read and insert documents
-	for _, doc := range docs {
+	// Materialize all rows first so column types can be inferred from the values
+	// (Mongo reports no column types). Without this, numeric/boolean fields would
+	// be stored as VARCHAR and comparisons/aggregates would fail.
+	rows := make([][]any, len(docs))
+	for r, doc := range docs {
 		values := make([]any, len(columns))
 		for i, col := range schema {
 			val, ok := doc[col.Name]
@@ -117,9 +115,31 @@ func (m *mongoHandler) Import() error {
 				values[i] = m.formatValue(val)
 			}
 		}
+		rows[r] = values
+	}
 
-		if err := m.storage.InsertRow(m.sanitizeName(collectionName), columns, values); err != nil {
-			return fmt.Errorf("failed to insert row: %w", err)
+	columnDefs := storage.InferColumnTypes(columns, rows)
+
+	// Build table structure, preserving inferred types when supported.
+	typedStorage, hasTypedStorage := m.storage.(storage.TypedStorage)
+	if hasTypedStorage {
+		if err := typedStorage.BuildStructureWithTypes(m.sanitizeName(collectionName), columnDefs); err != nil {
+			return fmt.Errorf("failed to build structure: %w", err)
+		}
+	} else if err := m.storage.BuildStructure(m.sanitizeName(collectionName), columns); err != nil {
+		return fmt.Errorf("failed to build structure: %w", err)
+	}
+
+	// Insert documents.
+	for _, values := range rows {
+		var insertErr error
+		if hasTypedStorage {
+			insertErr = typedStorage.InsertRowWithCoercion(m.sanitizeName(collectionName), columns, values, columnDefs)
+		} else {
+			insertErr = m.storage.InsertRow(m.sanitizeName(collectionName), columns, values)
+		}
+		if insertErr != nil {
+			return fmt.Errorf("failed to insert row: %w", insertErr)
 		}
 
 		m.totalLines++

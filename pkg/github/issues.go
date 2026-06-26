@@ -47,6 +47,7 @@ func (c *Client) SearchIssues(query string, state string, limit int) ([]Issue, e
 		args = append(args, "--limit", fmt.Sprintf("%d", limit))
 	}
 
+	// #nosec G204 -- the executable is the constant "gh" (GitHub CLI); only the arguments vary.
 	cmd := exec.Command("gh", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -131,6 +132,7 @@ func (c *Client) CreateIssue(req IssueCreateRequest) (*Issue, error) {
 		args = append(args, "--label", strings.Join(req.Labels, ","))
 	}
 
+	// #nosec G204 -- the executable is the constant "gh" (GitHub CLI); only the arguments vary.
 	cmd := exec.Command("gh", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -158,6 +160,7 @@ func (c *Client) AddComment(issueNumber int, body string) error {
 		"--body", body,
 	}
 
+	// #nosec G204 -- the executable is the constant "gh" (GitHub CLI); only the arguments vary.
 	cmd := exec.Command("gh", args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr

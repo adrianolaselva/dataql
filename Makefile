@@ -1,3 +1,7 @@
+# Use bash for recipes: several E2E targets use `source`, which the default
+# /bin/sh (dash on Debian/Ubuntu CI) does not provide.
+SHELL := /usr/bin/env bash
+
 PROJECT_NAME=dataql
 PROJECT_VENDOR=adrianolaselva
 VERSION=latest
@@ -23,7 +27,7 @@ endif
         build-linux build-linux-arm64 build-darwin build-darwin-arm64 build-windows \
         build-all install install-local uninstall release-dry-run docker-build \
         verify verify-binary fmt fmt-check hooks hooks-remove check \
-        e2e-up e2e-down e2e-logs e2e-status e2e-clean e2e-test e2e-wait e2e-reset \
+        e2e e2e-up e2e-down e2e-logs e2e-status e2e-clean e2e-test e2e-wait e2e-reset \
         e2e-test-scripts e2e-test-postgres e2e-test-mysql e2e-test-mongodb \
         e2e-test-kafka e2e-test-s3 e2e-test-sqs e2e-test-install
 
@@ -40,6 +44,16 @@ coverage:
 	@mkdir -p .tmp
 	go test -v -race -coverprofile=.tmp/coverage.out ./...
 	go tool cover -html=.tmp/coverage.out -o .tmp/coverage.html
+
+# Coverage ratchet: fail if total coverage drops below .coverage-baseline.
+coverage-check:
+	go test -coverprofile=coverage.out ./...
+	COVERAGE_FILE=coverage.out scripts/coverage-ratchet.sh check
+
+# Raise the committed baseline to the current coverage (only ever moves up).
+coverage-bump:
+	go test -coverprofile=coverage.out ./...
+	COVERAGE_FILE=coverage.out scripts/coverage-ratchet.sh bump
 
 lint:
 	golangci-lint run ./...
@@ -169,8 +183,21 @@ verify:
 # ============================================
 
 E2E_DIR=e2e
-E2E_COMPOSE=docker-compose -f $(E2E_DIR)/docker-compose.yaml -p dataql-e2e
+# Prefer Docker Compose v2 (`docker compose`); fall back to the v1 binary.
+DOCKER_COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
+E2E_COMPOSE=$(DOCKER_COMPOSE) -f $(E2E_DIR)/docker-compose.yaml -p dataql-e2e
 E2E_ENV_FILE=$(E2E_DIR)/.env
+
+# Single entrypoint: provision services, run the full E2E suite, tear down.
+# Teardown always runs; the suite's exit status is propagated (no silent pass).
+e2e: build
+	@echo "=== E2E: provisioning services ==="
+	@$(MAKE) e2e-up
+	@echo "=== E2E: running suite ==="
+	@$(MAKE) e2e-test-scripts; status=$$?; \
+		echo "=== E2E: tearing down ==="; \
+		$(MAKE) e2e-down; \
+		exit $$status
 
 # Start e2e infrastructure
 e2e-up:
@@ -217,7 +244,13 @@ e2e-wait:
 	@timeout 90 bash -c 'until docker exec dataql-kafka kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1; do sleep 2; done' || (echo "Kafka timeout" && exit 1)
 	@echo "✓ Kafka ready"
 	@echo "Waiting for LocalStack..."
-	@timeout 60 bash -c 'until curl -s http://localhost:24566/_localstack/health | grep -q "running"; do sleep 2; done' || (echo "LocalStack timeout" && exit 1)
+	@# Readiness = the edge health endpoint responds. Services are lazy-loaded
+	@# (they report "available", not "running", until first used), so don't grep
+	@# for "running" here or it would never match.
+	@timeout 120 bash -c 'until curl -sf http://localhost:24566/_localstack/health > /dev/null 2>&1; do sleep 2; done' || (echo "LocalStack timeout" && exit 1)
+	@# Then wait for the init scripts to finish provisioning resources
+	@# (bucket/queues/tables). The init endpoint reports {"completed": {"READY": true}}.
+	@timeout 60 bash -c 'until curl -sf http://localhost:24566/_localstack/init 2>/dev/null | grep -q "\"READY\": true"; do sleep 2; done' || echo "  (init readiness not confirmed; tests will verify resources)"
 	@echo "✓ LocalStack ready"
 	@echo "Waiting for Redis..."
 	@timeout 30 bash -c 'until docker exec dataql-redis redis-cli ping > /dev/null 2>&1; do sleep 2; done' || (echo "Redis timeout" && exit 1)

@@ -4,7 +4,7 @@
 #
 # Usage: ./test-all.sh [--verbose] [--stop-on-failure]
 
-set -e
+set +e  # do not abort the suite on a single non-zero command; tests track pass/fail via counters
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 E2E_DIR="$(dirname "$SCRIPT_DIR")"
@@ -157,6 +157,7 @@ run_test_suite "Kafka" "$SCRIPT_DIR/test-kafka.sh" || true
 run_test_suite "S3" "$SCRIPT_DIR/test-s3.sh" || true
 run_test_suite "SQS" "$SCRIPT_DIR/test-sqs.sh" || true
 run_test_suite "DynamoDB" "$SCRIPT_DIR/test-dynamodb.sh" || true
+run_test_suite "URL" "$SCRIPT_DIR/test-url.sh" || true
 
 # Print summary
 print_summary

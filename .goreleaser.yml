@@ -10,6 +10,11 @@ before:
     - go mod tidy
 
 builds:
+  # Self-contained build: the DuckDB engine is embedded (no `noduckdb` stub).
+  # Built on glibc (not Alpine/musl) so go-duckdb's prebuilt libstdc++-based
+  # static library links. The C++/gcc runtimes are linked statically; glibc and
+  # libstdc++ resolve at runtime and are present on all mainstream distros.
+  # Validated by the offline self-sufficiency smoke test.
   - id: dataql-linux
     main: ./main.go
     binary: dataql
@@ -19,14 +24,10 @@ builds:
       - linux
     goarch:
       - amd64
-    # Exclude DuckDB to avoid GLIBC compatibility issues
-    # Users who need DuckDB can build from source
-    tags:
-      - noduckdb
     ldflags:
       - -s -w
       - -linkmode external
-      - -extldflags "-static"
+      - -extldflags "-static-libgcc -static-libstdc++"
       - -X github.com/adrianolaselva/dataql/cmd.Version={{.Version}}
       - -X github.com/adrianolaselva/dataql/cmd.Commit={{.ShortCommit}}
       - -X github.com/adrianolaselva/dataql/cmd.BuildDate={{.Date}}
@@ -93,15 +94,16 @@ release:
     curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash
     ```
 
-    ### From Source (all platforms, with DuckDB support)
+    ### From Source (all platforms)
     ```bash
     git clone https://github.com/adrianolaselva/dataql.git
     cd dataql
     make build
     ```
 
-    > **Note:** Pre-built binaries do not include DuckDB support due to GLIBC compatibility.
-    > Build from source for full DuckDB support.
+    > Pre-built binaries are **self-contained**: the DuckDB engine and all
+    > source drivers are embedded, and the binary runs fully offline. It targets
+    > glibc-based Linux distributions (Debian, Ubuntu, RHEL, Fedora, …).
 
     ---
     **Full Changelog**: https://github.com/adrianolaselva/dataql/compare/{{ .PreviousTag }}...{{ .Tag }}

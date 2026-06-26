@@ -217,7 +217,10 @@ func tryConvertToBigInt(value any) (any, bool) {
 	case int64:
 		return v, true
 	case uint:
-		return int64(v), true
+		if uint64(v) <= ^uint64(0)>>1 { // Check if fits in int64
+			return int64(v), true
+		}
+		return nil, false
 	case uint8:
 		return int64(v), true
 	case uint16:

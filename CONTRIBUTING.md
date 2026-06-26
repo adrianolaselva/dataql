@@ -42,6 +42,20 @@ For test coverage:
 make coverage
 ```
 
+#### Coverage ratchet (never regress)
+
+Total coverage must never drop below the committed baseline in
+`.coverage-baseline`. CI enforces this on every PR. The baseline only ever
+moves up, on the path to the >= 90% target.
+
+```bash
+make coverage-check   # fail if coverage < baseline (what CI runs)
+make coverage-bump    # raise the baseline after you add tests
+```
+
+If you add tests that raise coverage, run `make coverage-bump` and commit the
+updated `.coverage-baseline` so the gain is locked in.
+
 #### E2E Tests (Integration Tests)
 
 E2E tests are **critical** for ensuring DataQL works correctly with all supported data sources. They must be run locally before submitting any PR.
@@ -184,13 +198,32 @@ e2e/
 
 5. **Update documentation** if needed
 
+### Quality gates (CI)
+
+Every PR runs these gates. They are designed so quality only ever ratchets up:
+
+| Gate | What it enforces | Run locally |
+|------|------------------|-------------|
+| Build | `go build ./...` compiles | `make build` |
+| Tests | unit/integration tests pass (`-race`) | `make test` |
+| Coverage ratchet | total coverage never drops below `.coverage-baseline` | `make coverage-check` |
+| Lint | `golangci-lint` (govet, staticcheck SA*, errcheck, …) — blocking | `make lint` |
+| Vulnerability scan | `govulncheck` finds no called-path vulnerabilities — blocking | `go run golang.org/x/vuln/cmd/govulncheck@latest ./...` |
+| Offline self-sufficiency | binary runs with the network disabled (no runtime downloads) | `scripts/smoke-offline.sh` |
+| Security (gosec) | blocking; inherent-rule exclusions documented in `scripts/gosec.sh` | `scripts/gosec.sh` |
+| E2E | advisory; full suite against emulated backends | `make e2e` |
+
+When you add tests that raise coverage, run `make coverage-bump` and commit the
+updated `.coverage-baseline`.
+
 ### PR Requirements
 
 - All CI checks must pass
 - E2E tests must have been run locally (include confirmation in PR description)
 - Code follows existing patterns and style
 - New features have corresponding tests
-- Commit messages are clear and descriptive
+- New features preserve the self-contained invariant (embedded, offline; see AGENTS.md)
+- Commit messages are clear and descriptive (Conventional Commits)
 
 ### PR Description Template
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"time"
@@ -173,6 +174,9 @@ func (d *DynamoDBConnector) ReadItems(tableName string, limit int) ([]map[string
 			remaining := limit - len(results)
 			if remaining <= 0 {
 				break
+			}
+			if remaining > math.MaxInt32 {
+				remaining = math.MaxInt32
 			}
 			input.Limit = aws.Int32(int32(remaining))
 		}

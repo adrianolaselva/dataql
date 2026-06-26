@@ -13,6 +13,26 @@ import (
 
 var nonAlphanumericRegex = regexp.MustCompile(`[^a-zA-Z0-9_ ]+`)
 
+// dbTypeToStorageType maps a source database column type (as reported by the
+// connector's schema, e.g. "integer", "int4", "bigint", "numeric", "double
+// precision", "boolean") to the storage engine's type. Unknown types fall back
+// to VARCHAR, preserving the previous behavior.
+func dbTypeToStorageType(dataType string) storage.DataType {
+	t := strings.ToLower(strings.TrimSpace(dataType))
+	switch {
+	case strings.Contains(t, "bool"):
+		return storage.TypeBoolean
+	case strings.Contains(t, "int"): // int, integer, bigint, smallint, tinyint, int4, int8
+		return storage.TypeBigInt
+	case strings.Contains(t, "numeric"), strings.Contains(t, "decimal"),
+		strings.Contains(t, "real"), strings.Contains(t, "double"),
+		strings.Contains(t, "float"):
+		return storage.TypeDouble
+	default:
+		return storage.TypeVarchar
+	}
+}
+
 // ConnectionInfo holds parsed connection information
 type ConnectionInfo struct {
 	Type     dbconnector.DBType
@@ -89,14 +109,25 @@ func (d *dbHandler) Import() error {
 		return nil
 	}
 
-	// Convert schema to column names
+	// Convert schema to column names and typed column definitions. Mapping the
+	// source column types (instead of defaulting everything to VARCHAR) is what
+	// makes numeric comparisons and aggregates (WHERE age > 30, SUM(age), ...)
+	// work on data imported from a database.
 	columns := make([]string, len(schema))
+	columnDefs := make([]storage.ColumnDef, len(schema))
 	for i, col := range schema {
-		columns[i] = d.sanitizeColumnName(col.Name)
+		name := d.sanitizeColumnName(col.Name)
+		columns[i] = name
+		columnDefs[i] = storage.ColumnDef{Name: name, Type: dbTypeToStorageType(col.DataType)}
 	}
 
-	// Build table structure
-	if err := d.storage.BuildStructure(d.sanitizeTableName(tableName), columns); err != nil {
+	// Build table structure, preserving column types when the storage supports it.
+	typedStorage, hasTypedStorage := d.storage.(storage.TypedStorage)
+	if hasTypedStorage {
+		if err := typedStorage.BuildStructureWithTypes(d.sanitizeTableName(tableName), columnDefs); err != nil {
+			return fmt.Errorf("failed to build structure: %w", err)
+		}
+	} else if err := d.storage.BuildStructure(d.sanitizeTableName(tableName), columns); err != nil {
 		return fmt.Errorf("failed to build structure: %w", err)
 	}
 
@@ -144,8 +175,14 @@ func (d *dbHandler) Import() error {
 			}
 		}
 
-		if err := d.storage.InsertRow(d.sanitizeTableName(tableName), columns, values); err != nil {
-			return fmt.Errorf("failed to insert row: %w", err)
+		var insertErr error
+		if hasTypedStorage {
+			insertErr = typedStorage.InsertRowWithCoercion(d.sanitizeTableName(tableName), columns, values, columnDefs)
+		} else {
+			insertErr = d.storage.InsertRow(d.sanitizeTableName(tableName), columns, values)
+		}
+		if insertErr != nil {
+			return fmt.Errorf("failed to insert row: %w", insertErr)
 		}
 
 		rowCount++

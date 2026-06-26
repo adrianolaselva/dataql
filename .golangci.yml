@@ -10,10 +10,13 @@ formatters:
 linters:
   enable:
     - contextcheck
+    - errcheck # error returns must be checked (safe Close/print calls excluded below)
     - errorlint
+    - govet
     - makezero
     - misspell
     - nilerr
+    - staticcheck # SA/ST/S correctness + style checks (opt-in QF quick-fixes excluded below)
     - tagliatelle
     - unconvert
     - unparam
@@ -27,10 +30,27 @@ linters:
     - noctx # HTTP without context is fine for CLI tool
     - prealloc # Optimization suggestions, not errors
     - gocritic # Style suggestions, too noisy
-    - errcheck # Too many false positives for defer Close() calls
-    - staticcheck # Too strict style rules for this codebase
-    - gosec # Too many false positives for CLI file processing tool
+    - gosec # Phased in via the advisory `vuln`/gosec job; see openspec change quality-harness-and-modernization
   settings:
+    errcheck:
+      exclude-functions:
+        - fmt.Scanln
+        - fmt.Scanf
+        - os.Remove
+    staticcheck:
+      # Run the full analysis but drop:
+      #  - QF*  : opt-in "quick-fix" stylistic refactors
+      #  - ST1000/ST1003/ST1020: package-comment / naming / comment-form style
+      #    rules that would force breaking renames of exported funcs and add
+      #    churn without catching real bugs. SA* (correctness) stays on.
+      checks:
+        - all
+        - -QF1003
+        - -QF1006
+        - -QF1012
+        - -ST1000
+        - -ST1003
+        - -ST1020
     tagliatelle:
       case:
         use-field-name: true
@@ -41,3 +61,8 @@ linters:
   exclusions:
     paths:
       - _test\.go
+    rules:
+      # Best-effort resource cleanup and terminal output: unchecked Close and
+      # color/print returns are not actionable for a CLI tool.
+      - linters: [errcheck]
+        text: "Error return value of `[^`]*\\.(Close|Print|Printf|Println|Fprint|Fprintf|Fprintln)` is not checked"

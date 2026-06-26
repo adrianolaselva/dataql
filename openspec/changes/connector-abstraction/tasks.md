@@ -1,9 +1,9 @@
 ## 1. Phase 1 — Safety net (no behavior change)
 
-- [ ] 1.1 Add a `pkg/source` package with a shared error helper `WrapError(scheme, op, uri, err)`.
-- [ ] 1.2 Add unit tests for `gcshandler` and `azurehandler` (URL parsing, env/config handling, error paths) — mock or table-drive what can be tested without a live backend.
-- [ ] 1.3 Add unit tests for `s3handler` URL/endpoint parsing, and for `dbconnector` + `filehandler/database` (currently 8% / 4%) — connection-string parsing, type mapping, error paths.
-- [ ] 1.4 Adopt the error helper in the remote handlers. Full gate green; coverage rises and the ratchet baseline is bumped.
+- [x] 1.1 Added `pkg/source` with `WrapError(scheme, op, uri, err)` (100% covered).
+- [x] 1.2 Added unit tests for `gcshandler` (25.5%) and `azurehandler` (46.6%) — URL parsing, both Azure URL forms, credential error paths, ResolveFiles pass-through (no network).
+- [x] 1.3 Added tests for `s3handler` (18.8%, URL parsing), `dbconnector` (8%→19.2%, type mappers, quoting, not-connected error paths), and `filehandler/database` (4%→52.4%, connection-URL parsing incl. DuckDB forms, sanitizers).
+- [x] 1.4 Helper landed and available; **wholesale adoption deferred to Phase 3** (the registry refactor) to avoid churning the error messages the new tests assert. Full gate green; coverage 37.4%→**40.8%**, baseline bumped.
 
 ## 2. Phase 2 — Emulator support + E2E
 

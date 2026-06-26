@@ -19,8 +19,8 @@ Legend: ✅ covered by an E2E script · 🟡 covered only by unit tests · ❌ g
 | DynamoDB | ✅ | LocalStack | `tests/test-dynamodb.sh` |
 | URL (http) | ✅ | local HTTP server | `tests/test-url.sh` (self-contained fixture server) |
 | Local files (all formats) | ✅ | local fixtures | `tests/test-formats.sh` runs the binary against CSV/JSON/JSONL/Parquet/Excel/XML/YAML/Avro/ORC fixtures; plus per-format unit tests in `pkg/filehandler/*` |
-| GCS | ❌ | — | **Blocked**: `gcshandler` has no custom-endpoint support, so a `fake-gcs-server` emulator can't be targeted. Needs connector endpoint override → roadmap milestone 3 (`connector-abstraction`) |
-| Azure Blob | ❌ | — | **Blocked**: `azurehandler` hardcodes `*.blob.core.windows.net`, so `azurite` can't be targeted. Needs connector endpoint override → roadmap milestone 3 |
+| GCS | ✅ | fake-gcs-server | `tests/test-gcs.sh` (gcshandler honors `STORAGE_EMULATOR_HOST`) |
+| Azure Blob | ✅ | azurite | `tests/test-azure.sh` (via `AZURE_STORAGE_CONNECTION_STRING`; seeds with the az CLI on CI, skips locally without it) |
 | RabbitMQ | ❌ | — | Source not yet implemented (roadmap milestone 5) |
 | Apache Pulsar | ❌ | — | Source not yet implemented (roadmap milestone 5) |
 

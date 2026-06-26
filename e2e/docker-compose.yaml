@@ -254,3 +254,33 @@ services:
       start_period: 5s
     restart: unless-stopped
     command: redis-server --appendonly yes
+
+  # ============================================
+  # GCS emulator (fake-gcs-server) — for gs:// E2E
+  # ============================================
+  fakegcs:
+    image: fsouza/fake-gcs-server:latest
+    container_name: dataql-fakegcs
+    hostname: fakegcs
+    networks:
+      dataql-e2e:
+        ipv4_address: 172.28.0.50
+    ports:
+      - "24443:4443"
+    command: ["-scheme", "http", "-public-host", "localhost:24443", "-external-url", "http://localhost:24443", "-port", "4443"]
+    restart: unless-stopped
+
+  # ============================================
+  # Azure Blob emulator (azurite) — for az:// E2E
+  # ============================================
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: dataql-azurite
+    hostname: azurite
+    networks:
+      dataql-e2e:
+        ipv4_address: 172.28.0.60
+    ports:
+      - "20000:10000"
+    command: ["azurite-blob", "--blobHost", "0.0.0.0", "--blobPort", "10000", "--skipApiVersionCheck"]
+    restart: unless-stopped

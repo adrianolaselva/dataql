@@ -7,10 +7,10 @@
 
 ## 2. Phase 2 — Emulator support + E2E
 
-- [ ] 2.1 GCS: honor `STORAGE_EMULATOR_HOST` (create the client with `option.WithoutAuthentication()` when set). Unit-test the wiring.
-- [ ] 2.2 Azure: support an emulator endpoint (azurite connection string / explicit endpoint). Unit-test the wiring.
-- [ ] 2.3 Add `fake-gcs-server` and `azurite` services to `e2e/docker-compose.yaml` with init/seed; add `e2e/tests/test-gcs.sh` and `test-azure.sh`; wire into `test-all.sh`.
-- [ ] 2.4 Update `e2e/COVERAGE.md`: GCS and Azure move from blocked → covered.
+- [x] 2.1 GCS honors `STORAGE_EMULATOR_HOST` (client built with `option.WithoutAuthentication()` when set). **Validated locally end-to-end** against fake-gcs-server (`gs://` query returned correct rows).
+- [x] 2.2 Azure works against azurite with **no source change** — `initClient` already creates the client from `AZURE_STORAGE_CONNECTION_STRING`, whose `BlobEndpoint` points at the emulator. (Found: the handler accepts `azure://` URLs, not `az://`; docs say `az://` — a docs/code mismatch to reconcile in Phase 3 or a docs fix.)
+- [x] 2.3 Added `fakegcs` + `azurite` to `e2e/docker-compose.yaml`; `tests/test-gcs.sh` (seeds via the no-auth fake-gcs REST API; 2/2 pass locally) and `tests/test-azure.sh` (seeds with the az CLI on CI, skips gracefully without it); wired both into `test-all.sh` + `.env`.
+- [x] 2.4 `e2e/COVERAGE.md`: GCS and Azure moved blocked → ✅ covered.
 
 ## 3. Phase 3 — Source registry
 

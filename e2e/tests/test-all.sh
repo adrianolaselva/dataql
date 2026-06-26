@@ -157,6 +157,11 @@ run_test_suite "Kafka" "$SCRIPT_DIR/test-kafka.sh" || true
 run_test_suite "S3" "$SCRIPT_DIR/test-s3.sh" || true
 run_test_suite "SQS" "$SCRIPT_DIR/test-sqs.sh" || true
 run_test_suite "DynamoDB" "$SCRIPT_DIR/test-dynamodb.sh" || true
+
+# Cloud object storage emulators
+run_test_suite "GCS" "$SCRIPT_DIR/test-gcs.sh" || true
+run_test_suite "Azure" "$SCRIPT_DIR/test-azure.sh" || true
+
 run_test_suite "URL" "$SCRIPT_DIR/test-url.sh" || true
 
 # File-format matrix (no services required)

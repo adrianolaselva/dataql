@@ -125,9 +125,12 @@ func writeWithBackup(path string, data []byte) error {
 		return err
 	}
 	if prev, err := os.ReadFile(path); err == nil {
+		// #nosec G703 -- path is an agent config file under the user's own home
+		// dir (os.UserHomeDir() + a constant filename), not untrusted input.
 		if err := os.WriteFile(path+".bak", prev, 0o600); err != nil {
 			return err
 		}
 	}
+	// #nosec G703 -- see above: path is the user's own agent config file.
 	return os.WriteFile(path, data, 0o600)
 }

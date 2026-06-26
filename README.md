@@ -8,14 +8,32 @@
   <strong>Query any data file using SQL. One command, instant results.</strong>
 </p>
 
+<!-- Build & quality -->
 <p align="center">
-  <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go" alt="Go Version"></a>
-  <a href="https://github.com/adrianolaselva/dataql/actions/workflows/build.yml"><img src="https://github.com/adrianolaselva/dataql/actions/workflows/build.yml/badge.svg" alt="Build"></a>
   <a href="https://github.com/adrianolaselva/dataql/actions/workflows/ci.yml"><img src="https://github.com/adrianolaselva/dataql/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/adrianolaselva/dataql/actions/workflows/build.yml"><img src="https://github.com/adrianolaselva/dataql/actions/workflows/build.yml/badge.svg" alt="Build"></a>
+  <a href="https://app.codecov.io/gh/adrianolaselva/dataql"><img src="https://img.shields.io/codecov/c/github/adrianolaselva/dataql?logo=codecov&label=coverage" alt="Coverage"></a>
   <a href="https://goreportcard.com/report/github.com/adrianolaselva/dataql"><img src="https://goreportcard.com/badge/github.com/adrianolaselva/dataql" alt="Go Report Card"></a>
-  <a href="https://pkg.go.dev/github.com/adrianolaselva/dataql"><img src="https://godoc.org/github.com/adrianolaselva/dataql?status.svg" alt="GoDoc"></a>
-  <img src="https://img.shields.io/github/issues/adrianolaselva/dataql" alt="GitHub issues">
+  <a href="https://pkg.go.dev/github.com/adrianolaselva/dataql"><img src="https://pkg.go.dev/badge/github.com/adrianolaselva/dataql.svg" alt="Go Reference"></a>
+</p>
+
+<!-- Distribution -->
+<p align="center">
+  <a href="https://github.com/adrianolaselva/dataql/releases/latest"><img src="https://img.shields.io/github/v/release/adrianolaselva/dataql?logo=github&label=release&sort=semver" alt="Latest release"></a>
+  <a href="https://github.com/adrianolaselva/dataql/pkgs/container/dataql"><img src="https://img.shields.io/badge/ghcr.io-dataql-2496ED?logo=docker&logoColor=white" alt="Docker image"></a>
+  <img src="https://img.shields.io/badge/platform-linux%20%7C%20macOS%20%7C%20windows-lightgrey" alt="Platforms">
+  <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white" alt="Go Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
+</p>
+
+<!-- Project -->
+<p align="center">
+  <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-ready-8A2BE2?logo=anthropic&logoColor=white" alt="MCP ready"></a>
+  <img src="https://img.shields.io/badge/offline-self--contained-success" alt="Self-contained / offline">
+  <a href="https://github.com/adrianolaselva/dataql/stargazers"><img src="https://img.shields.io/github/stars/adrianolaselva/dataql?logo=github" alt="Stars"></a>
+  <a href="https://github.com/adrianolaselva/dataql/commits/main"><img src="https://img.shields.io/github/last-commit/adrianolaselva/dataql" alt="Last commit"></a>
+  <a href="https://github.com/adrianolaselva/dataql/issues"><img src="https://img.shields.io/github/issues/adrianolaselva/dataql" alt="GitHub issues"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"></a>
 </p>
 
 <p align="center">
@@ -70,11 +88,11 @@ dataql run -f sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY regi
 ### Key Benefits
 
 - **Token Efficient**: LLMs get query results, not raw data. 99% reduction in token usage.
-- **Universal Format Support**: CSV, JSON, Parquet, Excel, XML, YAML, Avro, ORC - all queryable with SQL.
-- **Any Data Source**: Local files, URLs, S3, GCS, Azure, PostgreSQL, MySQL, MongoDB.
-- **LLM-Native**: Built-in MCP server for Claude, Codex, Gemini. Skills for Claude Code.
-- **Zero Setup**: Single binary, no dependencies, no configuration files.
-- **Familiar Syntax**: If you know SQL, you know DataQL.
+- **Universal Format Support**: CSV, JSON, JSONL, Parquet, Excel, XML, YAML, Avro, ORC — all queryable with SQL (plus transparent `.gz`, `.bz2`, `.xz` decompression).
+- **Any Data Source**: Local files, URLs, S3, GCS, Azure, PostgreSQL, MySQL, MongoDB, DynamoDB, and message queues (Kafka, SQS — peek without consuming).
+- **LLM-Native**: Built-in MCP server for Claude Code, Codex, opencode, Gemini. One `dataql setup` wires them all up. Auto-activating Skills for Claude Code.
+- **Self-Contained & Offline**: A single binary with the DuckDB engine and every driver embedded. No runtime downloads, no external services — works fully offline. Also shipped as a complete Docker image.
+- **Familiar Syntax**: If you know SQL, you know DataQL. Type inference, parameterized queries, joins across sources, and rich export formats included.
 
 ## Quick Start
 
@@ -126,7 +144,7 @@ dataql run -f data.csv
 - Google Cloud Storage
 - Azure Blob Storage
 - Standard input (stdin)
-- Message Queues (SQS, Kafka, RabbitMQ - peek without consuming)
+- Message Queues — Kafka, Amazon SQS (peek without consuming). RabbitMQ & Pulsar are on the roadmap.
 
 **Database Connectors:**
 - PostgreSQL
@@ -137,29 +155,50 @@ dataql run -f data.csv
 
 **Key Capabilities:**
 - Execute SQL queries using DuckDB syntax (OLAP-optimized)
-- Export results to CSV, JSONL, JSON, Excel, Parquet, XML, YAML formats
-- Interactive REPL mode with command history
-- Progress bar for large file operations
-- Parallel file processing for multiple inputs
-- Automatic flattening of nested JSON objects
-- Join data from multiple sources
+- Export to CSV, JSONL, JSON, Excel, Parquet, XML, YAML, **Markdown & HTML** tables
+- Transparent decompression of `.gz`, `.bz2`, `.xz` files
+- **Parameterized queries** (`-p name=value`) for safe, reusable scripts
+- **`describe`** command for instant exploratory statistics (min/max/mean/nulls/unique)
+- **Data caching** to speed up repeated queries over the same source
+- Interactive REPL mode with command history (`.tables`, `.schema`, `.exit`)
+- Progress bar, parallel multi-file processing, automatic nested-JSON flattening
+- Join data from multiple sources in a single query
 
 **LLM Integration:**
-- MCP Server for Claude Code, OpenAI Codex, Google Gemini
+- MCP Server for Claude Code, Codex, opencode, Gemini — one `dataql setup` configures them all
 - Auto-activating Claude Code Skills
 - Token-efficient data processing for AI assistants
+
+### Commands at a glance
+
+| Command | What it does |
+|---------|--------------|
+| `dataql run` | Query any file/source with SQL (or open the REPL) |
+| `dataql describe` | Exploratory statistics for a dataset's columns |
+| `dataql cache` | Inspect and manage the local query cache |
+| `dataql mcp serve` | Run the MCP server (stdio) for AI agents |
+| `dataql setup` | Auto-configure the MCP server for Claude Code, Codex, opencode |
+| `dataql skills` | Install/list the DataQL skills for Claude Code |
+
+Run `dataql <command> --help` for full options.
 
 ## LLM Integration
 
 DataQL is designed for efficient use with Large Language Models, enabling AI assistants to query large datasets without loading entire files into context.
 
 ```bash
-# Install skills for Claude Code
+# One command wires up every agent on your machine (Claude Code, Codex, opencode):
+# registers the MCP server, idempotent, no network, no manual config editing.
+dataql setup
+
+# Install the auto-activating Skills for Claude Code
 dataql skills install
 
-# Or start MCP server for any LLM
+# Or run the MCP server directly (stdio) for any MCP-capable client
 dataql mcp serve
 ```
+
+> The install script runs `dataql setup` for you, so agents work right after install.
 
 **Why use DataQL with LLMs?**
 
@@ -344,6 +383,42 @@ dataql run -f data.jsonl
 
 ### Examples
 
+**Exploratory statistics (`describe`):**
+
+```bash
+# Instant column profile: type, nulls, unique, min/max/mean/std
+dataql describe -f sales.csv
+```
+
+**Parameterized queries (safe & reusable):**
+
+```bash
+dataql run -f orders.csv \
+  -q "SELECT * FROM orders WHERE region = :region AND amount > :min" \
+  -p region=North -p min=100
+```
+
+**Compressed files (transparent):**
+
+```bash
+# .gz, .bz2 and .xz are decompressed on the fly
+dataql run -f logs.jsonl.gz -q "SELECT level, COUNT(*) FROM logs GROUP BY level"
+```
+
+**Cache a source for repeated queries:**
+
+```bash
+dataql run -f huge.parquet -q "SELECT ..." --cache   # first run loads & caches
+dataql cache list                                     # inspect cached datasets
+```
+
+**Run via Docker (no install):**
+
+```bash
+docker run --rm -v "$PWD":/data ghcr.io/adrianolaselva/dataql \
+  run -f /data/sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY region"
+```
+
 **Interactive Mode:**
 
 ```bash
@@ -508,7 +583,7 @@ For detailed documentation, see:
 
 ### Prerequisites
 
-- Go 1.24 or higher
+- Go 1.26 or higher
 - GCC (for CGO compilation - required for DuckDB)
 - Docker and Docker Compose (for E2E tests)
 
@@ -521,15 +596,27 @@ make build
 ### Testing
 
 ```bash
-# Unit tests
-make test
-
-# E2E tests (requires Docker)
-make e2e-up           # Start infrastructure (PostgreSQL, MySQL, MongoDB, Kafka, LocalStack)
-make e2e-wait         # Wait for services to be healthy
-make e2e-test-scripts # Run all E2E tests
-make e2e-down         # Stop infrastructure
+make test             # unit tests
+make coverage         # unit tests with an HTML coverage report
+make coverage-check   # enforce the coverage ratchet (what CI runs)
+make e2e              # full E2E suite: provision services, run, tear down (Docker)
 ```
+
+### Quality gates
+
+Every PR runs gates designed so quality only ever ratchets up — see
+[CONTRIBUTING.md](CONTRIBUTING.md) for the full table:
+
+| Gate | Enforces |
+|------|----------|
+| **Coverage ratchet** | total coverage never drops below `.coverage-baseline` (live % in the Codecov badge above) |
+| **Lint** | `golangci-lint` (govet, staticcheck, errcheck, …) — blocking |
+| **Vulnerability scan** | `govulncheck` — no known vulnerabilities in called code |
+| **Security scan** | `gosec` — blocking |
+| **Offline self-sufficiency** | the binary runs with the network disabled (no runtime downloads) |
+| **Self-contained release build** | the release binary embeds DuckDB and passes the offline smoke |
+| **Docker image** | the image builds and runs a query offline |
+| **E2E** | full suite against emulated backends (advisory) |
 
 ### E2E Test Coverage
 
@@ -543,8 +630,10 @@ DataQL includes comprehensive E2E tests for all data sources:
 | Kafka | 10+ | Peek mode, message parsing, exports |
 | S3 (LocalStack) | 13 | CSV, JSON, JSONL file reading, queries, exports |
 | SQS (LocalStack) | 16 | Message reading, filtering, aggregation, exports |
+| DynamoDB (LocalStack) | ✓ | Scan, queries, filters, exports |
+| URL (HTTP) | 3 | CSV/JSON over HTTP, WHERE filtering |
 
-See [e2e/README.md](e2e/README.md) for detailed E2E testing documentation.
+See [e2e/COVERAGE.md](e2e/COVERAGE.md) for the full source/feature coverage matrix and [e2e/README.md](e2e/README.md) for E2E testing docs.
 
 ### Linting
 

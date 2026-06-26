@@ -34,6 +34,13 @@ jobs:
           ./dataql mcp serve --help > /dev/null && echo "✓ mcp serve command OK"
           ./dataql skills install --help > /dev/null && echo "✓ skills install command OK"
           ./dataql skills list --help > /dev/null && echo "✓ skills list command OK"
+          ./dataql setup --help > /dev/null && echo "✓ setup command OK"
+          ./dataql describe --help > /dev/null && echo "✓ describe command OK"
+          ./dataql cache --help > /dev/null && echo "✓ cache command OK"
+          # Streaming flags must stay registered on run
+          for f in follow window interval max-messages duration idle-timeout; do
+            ./dataql run --help | grep -q -- "--$f" && echo "✓ run --$f flag OK" || { echo "✗ run --$f flag MISSING"; exit 1; }
+          done
           echo "All commands verified!"
 
   test:

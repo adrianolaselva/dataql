@@ -17,9 +17,10 @@
 | [Getting Started](getting-started.md) | Installation and Hello World examples |
 | [CLI Reference](cli-reference.md) | Complete command-line reference |
 | [Data Sources](data-sources.md) | Working with S3, GCS, Azure, URLs, and stdin |
-| [Database Connections](databases.md) | Connect to PostgreSQL, MySQL, DuckDB, MongoDB |
-| [LLM Integration](llm-integration.md) | Use DataQL with Claude, Codex, Gemini |
-| [MCP Setup](mcp-setup.md) | Configure MCP server for LLM integration |
+| [Database Connections](databases.md) | Connect to PostgreSQL, MySQL, DuckDB, MongoDB, DynamoDB |
+| [LLM Integration](llm-integration.md) | Use DataQL with Claude Code, Codex, opencode, Gemini |
+| [MCP Setup](mcp-setup.md) | `dataql setup` and MCP server configuration |
+| [Architecture](architecture.md) | How DataQL works under the hood |
 | [Examples](examples.md) | Real-world usage examples and automation scripts |
 
 ## Quick Links

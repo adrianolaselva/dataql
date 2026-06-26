@@ -5,13 +5,17 @@ title: DataQL - SQL for Any Data Format
 
 # DataQL
 
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev)
-[![Build](https://github.com/adrianolaselva/dataql/actions/workflows/build.yml/badge.svg)](https://github.com/adrianolaselva/dataql/actions/workflows/build.yml)
 [![CI](https://github.com/adrianolaselva/dataql/actions/workflows/ci.yml/badge.svg)](https://github.com/adrianolaselva/dataql/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/adrianolaselva/dataql?logo=codecov&label=coverage)](https://app.codecov.io/gh/adrianolaselva/dataql)
 [![Go Report Card](https://goreportcard.com/badge/github.com/adrianolaselva/dataql)](https://goreportcard.com/report/github.com/adrianolaselva/dataql)
+[![Latest release](https://img.shields.io/github/v/release/adrianolaselva/dataql?logo=github&label=release&sort=semver)](https://github.com/adrianolaselva/dataql/releases/latest)
+[![Docker image](https://img.shields.io/badge/ghcr.io-dataql-2496ED?logo=docker&logoColor=white)](https://github.com/adrianolaselva/dataql/pkgs/container/dataql)
+[![MCP ready](https://img.shields.io/badge/MCP-ready-8A2BE2?logo=anthropic&logoColor=white)](https://modelcontextprotocol.io)
+[![Offline](https://img.shields.io/badge/offline-self--contained-success)](#)
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> A powerful CLI tool for querying and transforming data across multiple formats
+> Query any data file or source with SQL — one self-contained binary, instant results, LLM-native.
 
 DataQL is a CLI tool developed in Go that allows you to query and manipulate data files using SQL statements.
 It loads data into a DuckDB database (in-memory or file-based) with automatic type inference, enabling powerful SQL operations optimized for analytical queries.
@@ -56,11 +60,11 @@ dataql run -f sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY regi
 ### Key Benefits
 
 - **Token Efficient**: LLMs get query results, not raw data. 99% reduction in token usage.
-- **Universal Format Support**: CSV, JSON, Parquet, Excel, XML, YAML, Avro, ORC - all queryable with SQL.
-- **Any Data Source**: Local files, URLs, S3, GCS, Azure, PostgreSQL, MySQL, MongoDB.
-- **LLM-Native**: Built-in MCP server for Claude, Codex, Gemini. Skills for Claude Code.
-- **Zero Setup**: Single binary, no dependencies, no configuration files.
-- **Familiar Syntax**: If you know SQL, you know DataQL.
+- **Universal Format Support**: CSV, JSON, JSONL, Parquet, Excel, XML, YAML, Avro, ORC — plus transparent `.gz`/`.bz2`/`.xz`.
+- **Any Data Source**: Local files, URLs, S3, GCS, Azure, PostgreSQL, MySQL, MongoDB, DynamoDB, Kafka & SQS.
+- **LLM-Native**: Built-in MCP server for Claude Code, Codex, opencode, Gemini — one `dataql setup` configures them all.
+- **Self-Contained & Offline**: One binary with DuckDB and every driver embedded — no runtime downloads, no external services. Also a complete Docker image.
+- **Familiar Syntax**: If you know SQL, you know DataQL — with type inference, parameterized queries, and rich exports.
 
 ---
 
@@ -121,6 +125,12 @@ curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/
 irm https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.ps1 | iex
 ```
 
+**Other options:** `go install github.com/adrianolaselva/dataql@latest`, or run with Docker — no install needed:
+
+```bash
+docker run --rm -v "$PWD":/data ghcr.io/adrianolaselva/dataql run -f /data/users.csv -q "SELECT * FROM users"
+```
+
 ### Hello World
 
 ```bash
@@ -129,6 +139,12 @@ echo -e "id,name,age\n1,Alice,28\n2,Bob,35\n3,Charlie,42" > users.csv
 
 # Query the data
 dataql run -f users.csv -q "SELECT * FROM users WHERE age > 30"
+
+# Get instant column statistics
+dataql describe -f users.csv
+
+# Wire DataQL into your AI agents (Claude Code, Codex, opencode)
+dataql setup
 ```
 
 ### Basic Usage

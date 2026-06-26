@@ -37,6 +37,7 @@ LOCAL_INSTALL=false
 FORCE=false
 UPGRADE=false
 CLEAN=false
+NO_SETUP=false
 
 # Global temp directory
 TMP_DIR=""
@@ -284,6 +285,7 @@ usage() {
     echo "  --force, -f             Force reinstall (always downloads and installs)"
     echo "  --reinstall             Alias for --force"
     echo "  --upgrade, -u           Upgrade to latest version (only if newer)"
+    echo "  --no-setup              Skip auto-configuring AI agents (MCP server)"
     echo "  --clean, -c             Remove all existing installations first"
     echo "  --help, -h              Show this help message"
     echo ""
@@ -320,6 +322,10 @@ parse_args() {
                 ;;
             --clean|-c)
                 CLEAN=true
+                shift
+                ;;
+            --no-setup)
+                NO_SETUP=true
                 shift
                 ;;
             --help|-h)
@@ -544,6 +550,15 @@ main() {
 
         check_path "$install_dir"
 
+        # Auto-configure AI agents (MCP server) unless opted out. This is a
+        # local-only, idempotent operation; it no-ops when no agent is present.
+        if [[ "$NO_SETUP" != "true" ]]; then
+            echo ""
+            echo "Configuring AI agents (MCP server)..."
+            "$dest" setup || warn "Agent setup skipped (run '${BINARY_NAME} setup' later)"
+        fi
+
+        echo ""
         echo "Get started:"
         echo "  ${BINARY_NAME} --help"
         echo "  ${BINARY_NAME} run -f data.csv -q \"SELECT * FROM data\""

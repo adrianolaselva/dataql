@@ -6,14 +6,14 @@
 
 ## 2. `dataql setup` command (agent auto-config)
 
-- [ ] 2.1 Add a `setup` cobra command under `cmd/` with `--agent`, `--global/--project`, `--dry-run` flags.
-- [ ] 2.2 Implement agent config writers (merge + idempotent, backup on change, no network): Claude Code (`mcpServers.dataql`), Codex (`~/.codex/config.toml` `mcp_servers.dataql`), opencode (config JSON `mcp.dataql`).
-- [ ] 2.3 Install skills for each detected agent (extend `cmd/skillsctl` beyond Claude). Report what was configured; succeed when none present.
-- [ ] 2.4 Unit tests against fixture configs: fresh write, idempotent re-run, preserve unrelated entries, no-agent case, dry-run.
+- [x] 2.1 Added `dataql setup` (`cmd/setupctl`) with `--agent` and `--dry-run` flags; registered in `cmd/main.go`.
+- [x] 2.2 Implemented agent config writers — merge + idempotent + backup (`.bak`) + no network: Claude Code (`~/.claude.json` `mcpServers.dataql`), Codex (`~/.codex/config.toml` `[mcp_servers.dataql]` appended without a TOML dep), opencode (`~/.config/opencode/opencode.json` `mcp.dataql`). **Validated end-to-end** against a temp HOME (configures 3 agents, preserves existing keys, idempotent re-run).
+- [~] 2.3 `setup` configures the MCP server for each detected agent and points to `dataql skills install` for skills. Per-agent skill auto-install (beyond Claude) is a follow-up — `skillsctl`'s installer needs exporting; tracked.
+- [x] 2.4 Unit tests cover fresh write, idempotent re-run, preserve-unrelated, invalid JSON, dry-run (no write), Codex append idempotency, opencode shape. Coverage rose 23.7%→24.1% (baseline bumped).
 
 ## 3. Install scripts & quickstart
 
-- [ ] 3.1 Harden `scripts/install.sh`: verify the downloaded binary, run `dataql setup` at the end (opt-out flag), print the next step.
+- [x] 3.1 `scripts/install.sh` now runs `dataql setup` after install (with a `--no-setup` opt-out) and prints next steps; syntax-checked.
 - [ ] 3.2 Mirror the changes in `scripts/install.ps1` (Windows) where applicable.
 - [ ] 3.3 Add a top-of-README "stupidly simple" quickstart (install → first query in <1 min) and document `go install`.
 

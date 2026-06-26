@@ -22,11 +22,15 @@ avoid writing speculative specs that go stale).
 | # | Change | Status | Summary |
 |---|--------|--------|---------|
 | 1 | `quality-harness-and-modernization` | **✅ done (PR #52, archived)** | Test/quality harness (coverage ratchet, hardened static analysis, govulncheck, standardized E2E infra, offline self-sufficiency smoke test) **plus** aggressive modernization (latest Go, AWS SDK and other libs; dependabot) and a self-contained release binary with DuckDB embedded. Bonus: fixed a real DB numeric-type import bug the harness caught. |
-| 2 | `distribution-and-install` | **detailed — implementing** | One-line install (script + Homebrew tap + `go install`) that auto-configures MCP + skills; complete Docker image published to GHCR; arm64 binaries; "stupidly simple" quickstart; agent usage guides (Claude Code, Codex, opencode). |
-| 3 | `connector-abstraction` | planned | Unify the existing source connectors behind one interface (consistent auth, pagination, errors, tests, docs). All connectors compiled into the binary. Base for adding sources without regression. |
-| 4 | `streaming-mode` | planned | First-class streaming: continuous consumption from topics/queues to stdout or windowed SQL. |
+| 2 | `distribution-and-install` | **✅ done (PR #59, archived)** | Self-contained Docker image (GHCR on release) + `dataql setup` (agent MCP auto-config) + one-line install. *Follow-ups: arm64 binaries, Homebrew tap.* |
+| 3 | `connector-abstraction` | **✅ done (PR #62, archived)** | `source.Resolver` registry (adding a remote source = register it); GCS/Azure emulator support + E2E (GCS live; Azure seed a follow-up); safety-net tests. Coverage 24%→41%. *Follow-ups: DB/MQ into the registry, `az://` alias, `source.WrapError` adoption.* |
+| 4 | `streaming-mode` | **detailed — implementing** | First-class streaming: continuous consumption from topics/queues to stdout or windowed SQL. |
 | 5 | `source-pulsar`, `source-rabbitmq` | planned | New embedded sources that are still missing (Kafka, SQS, S3, Postgres, MySQL, DynamoDB, Mongo already exist). |
-| 6 | `llm-obvious-docs` | planned | Restructure docs to be obvious for LLMs: structured reference, runnable examples, sharp MCP tool/skill descriptions. Each milestone above also updates docs incrementally. |
+| 6 | `llm-obvious-docs` | partly done | Restructure docs to be obvious for LLMs. README/Pages overhauled (PR #60); structured reference + sharper MCP tool descriptions remain. |
+
+### Cross-cutting follow-ups (tracked, not milestones)
+- Coverage push toward 90% (core `internal/dataql` 14%, `dbconnector`, `mcpctl`, `repl`, cloud handlers).
+- M2: arm64 release binaries + Homebrew tap. · M3: Azure E2E seed hardening, `az://` alias, fold DB/MQ into the registry.
 
 ## Ordering rationale
 

@@ -37,3 +37,33 @@ an initial stabilization period in which the job may be advisory).
 - **WHEN** an end-to-end test fails on a pull request and the E2E gate is active
 - **THEN** the CI E2E job fails and the PR cannot be merged
 
+### Requirement: End-to-end coverage of every shipped file format
+The E2E suite SHALL exercise every shipped file format by running the real
+`dataql` binary against fixture files and asserting the query results. The
+covered formats MUST include CSV, JSON, JSONL, Parquet, Excel, XML, YAML, Avro,
+and ORC.
+
+#### Scenario: Each format is queried end-to-end
+- **WHEN** the E2E format matrix runs
+- **THEN** for each supported format, the binary loads a fixture and a SQL query
+  returns the expected rows, proving the format works through the full pipeline
+
+#### Scenario: A format regression is caught
+- **WHEN** a change breaks reading of a supported format
+- **THEN** the corresponding format-matrix E2E test fails
+
+### Requirement: GCS and Azure Blob have emulator-backed E2E
+The E2E suite SHALL cover Google Cloud Storage and Azure Blob Storage against
+local emulators (e.g. fake-gcs-server and azurite), querying objects through the
+real `dataql` binary. These were previously deferred because the handlers could
+not target an emulator.
+
+#### Scenario: Query a GCS object via the emulator
+- **WHEN** the E2E suite runs with a GCS emulator and a seeded object
+- **THEN** `dataql` reads `gs://<bucket>/<object>` from the emulator and a query
+  returns the expected rows
+
+#### Scenario: Query an Azure Blob via the emulator
+- **WHEN** the E2E suite runs with azurite and a seeded blob
+- **THEN** `dataql` reads the blob and a query returns the expected rows
+

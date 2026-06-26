@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/option"
 )
 
 // GCSHandler handles downloading files from Google Cloud Storage
@@ -127,12 +128,19 @@ func (h *GCSHandler) downloadGCSFile(gcsURL string) (string, error) {
 	return localPath, nil
 }
 
-// initClient initializes the GCS client using default credentials
+// initClient initializes the GCS client using default credentials, or an
+// emulator (e.g. fake-gcs-server) when STORAGE_EMULATOR_HOST is set. The storage
+// client reads STORAGE_EMULATOR_HOST automatically; we only skip authentication
+// when it is present, so local/E2E runs need no real credentials.
 func (h *GCSHandler) initClient() error {
 	ctx := context.Background()
 
-	// Create GCS client using Application Default Credentials
-	client, err := storage.NewClient(ctx)
+	var opts []option.ClientOption
+	if os.Getenv("STORAGE_EMULATOR_HOST") != "" {
+		opts = append(opts, option.WithoutAuthentication())
+	}
+
+	client, err := storage.NewClient(ctx, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to create GCS client: %w", err)
 	}

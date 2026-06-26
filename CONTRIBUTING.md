@@ -166,6 +166,34 @@ e2e/
 | S3 | 13 | File reading (CSV, JSON, JSONL), queries, exports |
 | SQS | 16 | Message reading, filtering, aggregation, exports |
 
+## Adding a remote data source
+
+Remote object-store / URL sources (S3, GCS, Azure Blob, HTTP) implement the
+`source.Resolver` contract (`pkg/source`):
+
+```go
+type Resolver interface {
+    // Replace the URIs this source owns with local file paths; pass everything
+    // else through unchanged.
+    ResolveFiles(files []string) ([]string, error)
+    // Remove any temp files this resolver created.
+    Cleanup() error
+}
+```
+
+The core engine (`internal/dataql`) runs a slice of `source.Resolver`s in order,
+so a new source is added by:
+
+1. Creating a handler package that implements `ResolveFiles` + `Cleanup`
+   (download the URI to a temp file, return its local path).
+2. Registering it in the `remoteResolvers` slice in `internal/dataql/dataql.go`.
+3. Adding unit tests (URL parsing, config/env, error paths — no live backend)
+   and, where an emulator exists, an E2E script under `e2e/tests/`.
+
+No other engine change is required. Support a local emulator via env (as GCS does
+with `STORAGE_EMULATOR_HOST` and S3 with `AWS_ENDPOINT_URL`) so it can be
+E2E-tested without real credentials.
+
 ## Pull Request Process
 
 ### Before Submitting

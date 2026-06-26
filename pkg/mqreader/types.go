@@ -61,6 +61,12 @@ type MessageQueueReader interface {
 	// Returns a slice of messages and any error encountered.
 	Peek(ctx context.Context, maxMessages int) ([]Message, error)
 
+	// Stream continuously consumes new messages, advancing the offset / deleting
+	// consumed messages (at-least-once). The returned channel yields messages as
+	// they arrive and is closed when ctx is cancelled. Unlike Peek, Stream
+	// consumes: each message is delivered once across runs.
+	Stream(ctx context.Context) (<-chan Message, error)
+
 	// GetMetadata returns information about the queue/topic
 	GetMetadata(ctx context.Context) (*QueueMetadata, error)
 

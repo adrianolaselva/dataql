@@ -1,5 +1,7 @@
 package dataql
 
+import "time"
+
 type Params struct {
 	FileInputs     []string
 	DataSourceName string
@@ -18,6 +20,12 @@ type Params struct {
 	QueryParams    []string // Query parameters in format "name=value"
 	Cache          bool     // Enable data caching for faster subsequent queries
 	CacheDir       string   // Cache directory path (default: ~/.dataql/cache)
+
+	// Streaming (dataql run --follow)
+	Follow      bool          // Continuously consume a queue/topic instead of one-shot
+	MaxMessages int           // Stop after N messages (0 = unlimited)
+	Duration    time.Duration // Stop after this much time (0 = unlimited)
+	IdleTimeout time.Duration // Stop when no message arrives for this period (0 = disabled)
 }
 
 // FileInput represents a file path with an optional table alias

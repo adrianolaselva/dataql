@@ -134,6 +134,16 @@ func (c *dataQlCtl) Command() (*cobra.Command, error) {
 		PersistentFlags().
 		StringVar(&c.params.CacheDir, cacheDirParam, "", "cache directory (default: ~/.dataql/cache)")
 
+	// Streaming flags (dataql run --follow against kafka://, sqs://)
+	command.PersistentFlags().
+		BoolVar(&c.params.Follow, "follow", false, "continuously consume a queue/topic (kafka://, sqs://) and emit messages as they arrive")
+	command.PersistentFlags().
+		IntVar(&c.params.MaxMessages, "max-messages", 0, "stop streaming after N messages (0 = unlimited)")
+	command.PersistentFlags().
+		DurationVar(&c.params.Duration, "duration", 0, "stop streaming after this duration, e.g. 30s (0 = unlimited)")
+	command.PersistentFlags().
+		DurationVar(&c.params.IdleTimeout, "idle-timeout", 0, "stop streaming when no message arrives for this duration (0 = disabled)")
+
 	// Note: file flag is no longer required if storage flag points to existing DuckDB file
 	// Validation is done in runE to allow querying existing DuckDB files
 
@@ -154,6 +164,14 @@ func (c *dataQlCtl) runE(cmd *cobra.Command, _ []string) error {
 	// If no file inputs and no storage, we need at least one source
 	if !hasFileInputs && !hasStorage {
 		return fmt.Errorf("either --file or --storage with an existing DuckDB file is required")
+	}
+
+	// Streaming mode: continuously consume a queue/topic instead of one-shot.
+	if c.params.Follow {
+		if err := dataql.StreamFollow(c.params); err != nil {
+			return fmt.Errorf("failed to stream: %w", err)
+		}
+		return nil
 	}
 
 	// If no file inputs but storage is provided, check if we can query existing DuckDB

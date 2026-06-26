@@ -79,8 +79,13 @@ dataql run -f sales.csv -q "SELECT region, SUM(revenue) FROM sales GROUP BY regi
 ## Quick Start
 
 ```bash
-# Install DataQL
+# Install DataQL (also: `go install github.com/adrianolaselva/dataql@latest`,
+# or `docker run --rm -v "$PWD":/data ghcr.io/adrianolaselva/dataql ...`)
 curl -fsSL https://raw.githubusercontent.com/adrianolaselva/dataql/main/scripts/install.sh | bash
+
+# (Optional) wire DataQL into your AI agents (Claude Code, Codex, opencode).
+# The install script already runs this for you.
+dataql setup
 
 # Query a CSV file
 dataql run -f data.csv -q "SELECT * FROM data WHERE amount > 100"

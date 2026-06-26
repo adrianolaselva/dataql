@@ -17,25 +17,25 @@
 - [ ] 3.2 Mirror the changes in `scripts/install.ps1` (Windows) where applicable.
 - [ ] 3.3 Add a top-of-README "stupidly simple" quickstart (install → first query in <1 min) and document `go install`.
 
-## 4. arm64 release binaries
+## 4. arm64 release binaries (follow-up — needs CI validation)
 
-- [ ] 4.1 Add linux arm64 to `.goreleaser.yml` using the pinned Zig cross compiler (`CC="zig cc -target aarch64-linux-gnu"`); keep amd64 as-is.
+- [ ] 4.1 Add linux arm64 to `.goreleaser.yml` via the Zig cross compiler (`CC="zig cc -target aarch64-linux-gnu"`). **Deferred**: needs zig wired into `release.yml` and a real release run to validate (can't be checked locally); amd64 ships now.
 - [ ] 4.2 Smoke-test each architecture's binary (offline) in CI before release.
-- [ ] 4.3 Decide darwin/arm64 (native macOS runner vs Homebrew-from-source) and wire whichever is chosen.
+- [ ] 4.3 Decide darwin/arm64 (native macOS runner vs Homebrew-from-source).
 
-## 5. Publishing (needs maintainer one-time setup)
+## 5. Publishing
 
-- [ ] 5.1 Add goreleaser `dockers` + `docker_manifests` for multi-arch `ghcr.io/adrianolaselva/dataql`; `release.yml` logs into GHCR and pushes on tags.
-- [ ] 5.2 Add goreleaser `brews` block publishing a formula to `adrianolaselva/homebrew-tap`.
-- [ ] 5.3 Document the maintainer one-time setup (enable GHCR package, create `homebrew-tap` repo, add `HOMEBREW_TAP_TOKEN`); gate publish steps so PRs/forks don't fail without secrets.
+- [x] 5.1 GHCR publish wired: `release.yml` logs into GHCR with `GITHUB_TOKEN` (added `packages: write`) and builds+pushes the validated self-contained image as `ghcr.io/adrianolaselva/dataql:<tag>` and `:latest` on tags (amd64). Multi-arch image is a follow-up (4.1).
+- [ ] 5.2 Homebrew tap (`brews` in goreleaser → `adrianolaselva/homebrew-tap`). **Deferred**: needs the maintainer to create the `homebrew-tap` repo + a token; the script-install path covers macOS meanwhile.
+- [~] 5.3 GHCR publish needs no extra secret (uses `GITHUB_TOKEN`); document the Homebrew one-time setup when 5.2 lands.
 
 ## 6. Agent usage docs
 
-- [ ] 6.1 Short per-agent setup guides (Claude Code, Codex, opencode) showing `dataql setup` and a sample MCP interaction.
-- [ ] 6.2 Update `docs/mcp-setup.md` and `docs/llm-integration.md` to point at `dataql setup` instead of manual config editing.
+- [~] 6.1 `docs/mcp-setup.md` now leads with `dataql setup`; dedicated per-agent sample-interaction guides are a small follow-up.
+- [x] 6.2 Updated `docs/mcp-setup.md` to lead with `dataql setup` over manual config editing.
 
 ## 7. Wrap-up
 
-- [ ] 7.1 Keep the coverage ratchet green (add tests for new code; `make coverage-bump` if it rises).
-- [ ] 7.2 Run `openspec validate distribution-and-install --strict`; full gate green.
+- [x] 7.1 Coverage ratchet green; rose to 24.1% with setupctl tests (baseline bumped).
+- [ ] 7.2 Run `openspec validate distribution-and-install --strict`; full gate green (local gates green; CI runs on PR).
 - [ ] 7.3 Update the roadmap and archive the change once merged.
